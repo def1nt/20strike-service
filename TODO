@@ -1,0 +1,6 @@
+move configs and db to a separate directory
+request data from db first, if empty, query then store then re request
+some classes are queried jit, without storing
+
+Computer: OGK-9, Class: Win32_PerfFormattedData_Tcpip_IPv4
+ERROR Не удалось подключиться к OGK-9

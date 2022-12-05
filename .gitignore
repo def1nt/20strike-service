@@ -1,0 +1,5 @@
+.vscode/*
+bin/*
+obj/*
+oldie/*
+sqlite-tools-win32-x86-3380500/*
