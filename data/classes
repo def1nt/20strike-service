@@ -2,7 +2,6 @@ Win32_BIOS
 Win32_ComputerSystem
 Win32_DesktopMonitor
 Win32_DiskDrive
-Win32_LocalTime
 Win32_LogicalDisk
 Win32_MemoryArray
 Win32_NetworkAdapter
