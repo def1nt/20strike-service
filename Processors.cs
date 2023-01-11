@@ -58,8 +58,8 @@ partial class Application
             var classname = request["class"];
             var objectname = request["object"];
             var methodname = request["method"];
-            InvokeMethod(computername, classname, methodname, objectname);
-            response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes("Done"));
+            string result = InvokeMethod(computername, classname, methodname, objectname);
+            response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes(result));
         }
 
         // response.Close(); // Closed by caller, not our business
