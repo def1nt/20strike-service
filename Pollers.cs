@@ -59,7 +59,9 @@ partial class Application
         if (!OperatingSystem.IsWindows()) return 1;
         if (computername == null || classname == null) return 1;
         if (classname == "Meta_Software") return PollSoftware(computername);
-        var mp = new ManagementPath($@"\\{computername}\root\cimv2:{classname}");
+        string WMIProvider = "cimv2";
+        if (classname == "WmiMonitorID") WMIProvider = "wmi";
+        var mp = new ManagementPath($@"\\{computername}\root\{WMIProvider}:{classname}");
         var mc = new ManagementClass(mp);
         ManagementObjectCollection mo;
         try
