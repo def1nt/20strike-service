@@ -83,7 +83,7 @@ partial class Application
     {
         SqliteCommand comm = new SqliteCommand();
         if (computername == "*") { computername = "%"; }
-        comm.CommandText = @$"select distinct t.class, t.param, t.value from data t
+        comm.CommandText = @$"select t.class, t.param, t.value from data t
 join schema_tab sc on sc.class=t.class and sc.param=t.param
 where pc LIKE $pc";
         comm.Parameters.AddWithValue("$pc", computername);
