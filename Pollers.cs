@@ -74,10 +74,12 @@ partial class Application
             return 1;
         }
         cleanup(computername, classname);
+        int c = 0;
         foreach (ManagementObject o in mo)
         {
+            if (c++ > 9 && classname == "Win32_NTLogEvent") break;
             PropertyDataCollection props = o.Properties;
-
+            List<string?[]> props_processed = new List<string?[]>{};  // Deal with these nulls!
             foreach (var p in props)
             {
                 if (p.Value == null) continue;
@@ -85,9 +87,11 @@ partial class Application
                 string t = p.Type.ToString();
 
                 string? s = getFromCIMObject(p.Type, p.Value);
-
-                dbinsert(new string?[] { computername, classname, p.Name, t, s });
+                if (classname == "Win32_NTLogEvent" && p.Name == "Type" && s != "Ошибка") {c--; goto managementObjectsLoop; }
+                props_processed.Add(new string?[5] { computername, classname, p.Name, t, s });
             }
+            foreach (var p in props_processed) dbinsert(p);
+            managementObjectsLoop:;
         }
         // merge();
         return 0;
