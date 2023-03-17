@@ -1,10 +1,12 @@
 Win32_BIOS
 Win32_ComputerSystem
 Win32_DesktopMonitor
+WmiMonitorID
 Win32_DiskDrive
 Win32_LogicalDisk
 Win32_MemoryArray
 Win32_NetworkAdapter
+Win32_NTLogEvent
 Win32_OperatingSystem
 Win32_PhysicalMedia
 Win32_PhysicalMemory
