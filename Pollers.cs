@@ -87,7 +87,7 @@ partial class Application
                 string t = p.Type.ToString();
 
                 string? s = getFromCIMObject(p.Type, p.Value);
-                if (classname == "Win32_NTLogEvent" && p.Name == "Type" && s != "Ошибка") {c--; goto managementObjectsLoop; }
+                if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") {c--; goto managementObjectsLoop; }
                 props_processed.Add(new string?[5] { computername, classname, p.Name, t, s });
             }
             foreach (var p in props_processed) dbinsert(p);
