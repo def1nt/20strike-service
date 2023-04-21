@@ -104,6 +104,7 @@ partial class Application
 
     public async void AutoUpdate()
     {
+        PruneData();
         if (!new System.DayOfWeek[] { System.DayOfWeek.Saturday, System.DayOfWeek.Sunday }.Contains(DateTime.Today.DayOfWeek))
             await QueryAll();
         System.Console.WriteLine(DateTime.Now.ToString());

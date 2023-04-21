@@ -110,4 +110,36 @@ where pc LIKE $pc";
         return d.ToArray<Dictionary<string, string>>();
     }
 
+    public void PruneData()
+    {
+        var computerNamesFact = GetComputers();
+
+        string query = "Select distinct pc from data";
+        var computerNamesSaved = new List<string>();
+        using (var cmd = new SqliteCommand(query, conn))
+        {
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    computerNamesSaved.Add(reader.GetString(0));
+                }
+            }
+        }
+
+        var computerNamesToDelete = computerNamesSaved.Except(computerNamesFact);
+        foreach (var computerName in computerNamesToDelete)
+        {
+            query = $"delete from data where pc = '{computerName}'";
+            using (var cmd = new SqliteCommand(query, conn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        using (var cmd = new SqliteCommand("vacuum", conn))
+        {
+            cmd.ExecuteNonQuery();
+        }
+    }
 }
