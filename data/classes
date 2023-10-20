@@ -4,11 +4,9 @@ Win32_DesktopMonitor
 WmiMonitorID
 Win32_DiskDrive
 Win32_LogicalDisk
-Win32_MemoryArray
 Win32_NetworkAdapter
 Win32_NTLogEvent
 Win32_OperatingSystem
-Win32_PhysicalMedia
 Win32_PhysicalMemory
 Win32_PerfFormattedData_Tcpip_IPv4
 Win32_Printer
