@@ -41,7 +41,7 @@ partial class Application
 
                         // Set sAMAccountName if available
                         if (searchResult.Properties[SamAccountNameProperty].Count > 0)
-                            user.SamAcountName = searchResult.Properties[SamAccountNameProperty][0].ToString() ?? "Unknown";
+                            user.SamAcountName = searchResult.Properties[SamAccountNameProperty][0].ToString()?.ToLower() ?? "Unknown";
 
                         // Add user to users list.
                         users.Add(user);
