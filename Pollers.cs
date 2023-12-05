@@ -19,9 +19,9 @@ partial class Application
             await Task.Delay(60000, cancellationToken);
             if (cancellationToken.IsCancellationRequested) break;
             taskhandler.AddAction(() => QueryComputer(Computer)); // TODO утекает и не проверяется завершение
-            pollerProgress = (int)(current * 100 / total);
+            pollerProgress = current * 100 / total;
         }
-        System.Console.WriteLine("Done updating");
+        Console.WriteLine("Done updating");
         return current;
     }
 
@@ -31,24 +31,24 @@ partial class Application
 
         foreach (string? Class in classes)
         {
-            System.Console.WriteLine($"\nComputer: {Computer}, Class: {Class}");
+            Console.WriteLine($"\nComputer: {Computer}, Class: {Class}");
             try
             {
                 QueryComputerClass(Computer, Class);
             }
             catch (System.Runtime.InteropServices.COMException)
             {
-                System.Console.WriteLine($"ERROR Не удалось подключиться к {Computer}");
+                Console.WriteLine($"ERROR Не удалось подключиться к {Computer}");
                 break;
             }
-            catch (System.UnauthorizedAccessException)
+            catch (UnauthorizedAccessException)
             {
-                System.Console.WriteLine($"ERROR Нет доступа к {Computer}");
+                Console.WriteLine($"ERROR Нет доступа к {Computer}");
                 break;
             }
             catch (Exception error)
             {
-                System.Console.WriteLine($"ERROR Неизвестная ошибка: {error.Message}");
+                Console.WriteLine($"ERROR Неизвестная ошибка: {error.Message}");
             }
         }
         return 0;
@@ -68,9 +68,9 @@ partial class Application
         {
             mo = mc.GetInstances();
         }
-        catch (System.Management.ManagementException)
+        catch (ManagementException)
         {
-            System.Console.WriteLine($"ERROR Unsupported class {classname} on {computername}");
+            Console.WriteLine($"ERROR Unsupported class {classname} on {computername}");
             return 1;
         }
         cleanup(computername, classname);
@@ -79,14 +79,14 @@ partial class Application
         {
             if (c++ > 9 && classname == "Win32_NTLogEvent") break;
             PropertyDataCollection props = o.Properties;
-            List<string?[]> props_processed = new List<string?[]>{};  // Deal with these nulls!
+            List<string?[]> props_processed = new() { };  // Deal with these nulls!
             foreach (var p in props)
             {
                 if (p.Value == null) continue;
 
                 string t = p.Type.ToString();
 
-                string? s = getFromCIMObject(p.Type, p.Value);
+                string? s = GetFromCIMObject(p.Type, p.Value);
                 if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") {c--; goto managementObjectsLoop; }
                 props_processed.Add(new string?[5] { computername, classname, p.Name, t, s });
             }
@@ -97,7 +97,7 @@ partial class Application
         return 0;
     }
 
-    string? getFromCIMObject(CimType type, object value)
+    string? GetFromCIMObject(CimType type, object value)
     {
         if (!OperatingSystem.IsWindows()) return "ERROR WRONG OS";
         return type switch  // But sometimes this is not a scalar but an array HMMMMMMMMMMM
@@ -112,15 +112,15 @@ partial class Application
             CimType.SInt64 => ObjectToString<System.Int64>(value),
             CimType.Boolean => ObjectToString<System.Boolean>(value),
             CimType.DateTime => value.ToString(),
-            CimType.Reference => (value).ToString(),
+            CimType.Reference => value.ToString(),
             _ => "ERROR NIY"
         };
     }
 
     string ObjectToString<type>(object o)
     {
-        return (o.GetType().IsArray ? ArrayToString<type>(o) :
-            (string.IsNullOrEmpty(((type)o).ToString()) ? "" : ((type)o).ToString()!));
+        return o.GetType().IsArray ? ArrayToString<type>(o) :
+            (string.IsNullOrEmpty(((type)o).ToString()) ? "" : ((type)o).ToString()!);
     }
 
     string ArrayToString<type>(object array)
@@ -128,7 +128,7 @@ partial class Application
         string res = "[";
         foreach (type a in (array as Array)!)
         {
-            res += (((type)a).ToString() + ", ");
+            res += ((type)a).ToString() + ", ";
         }
         res += "]";
         res = res.Replace(", ]", "]");
@@ -167,9 +167,9 @@ partial class Application
 
         using (DirectoryEntry entry = new DirectoryEntry(@$"LDAP://{domain.Name}"))
         {
-            using (DirectorySearcher mySearcher = new DirectorySearcher(entry))
+            using (DirectorySearcher mySearcher = new(entry))
             {
-                mySearcher.Filter = ("(objectClass=computer)");
+                mySearcher.Filter = "(objectClass=computer)";
                 mySearcher.SizeLimit = 0;
                 mySearcher.PageSize = 250;
                 mySearcher.PropertiesToLoad.Add("name");
