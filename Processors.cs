@@ -15,15 +15,15 @@ partial class Application
 
             if (target == "computers")
             {
-                response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes(serialize(GetComputers())));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(serialize(GetComputers())));
             }
             if (target == "classes")
             {
-                response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes(serialize(GetClasses())));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(serialize(GetClasses())));
             }
             if (target == "users")
             {
-                response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes(serialize(GetUsers())));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(serialize(GetUsers())));
             }
             if (target == "info")
             {
@@ -32,7 +32,7 @@ partial class Application
                 if (!request.ContainsKey("pc") || string.IsNullOrEmpty(computername = request["pc"])) computername = "*"; // Trying to one-line two checks and assignment
                 if (!request.ContainsKey("class") || string.IsNullOrEmpty(classname = request["class"])) classname = "*";
                 var data = read(computername, classname);
-                var bytes = System.Text.ASCIIEncoding.UTF8.GetBytes(serialize(data));
+                var bytes = System.Text.Encoding.UTF8.GetBytes(serialize(data));
                 response.OutputStream.Write(bytes);
             }
         }
@@ -42,13 +42,13 @@ partial class Application
             var target = request["target"];
             if (!taskhandler.AllReady())
             {
-                response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes($"Already updating {pollerProgress}%"));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes($"Already updating {pollerProgress}%"));
             }
             else
             {
                 if (!string.IsNullOrEmpty(target))
                     taskhandler.AddAction(() => QueryComputer(target));
-                response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes("Started update"));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes("Started update"));
             }
         }
 
@@ -59,7 +59,7 @@ partial class Application
             var objectname = request["object"];
             var methodname = request["method"];
             string result = InvokeMethod(computername, classname, methodname, objectname);
-            response.OutputStream.Write(System.Text.ASCIIEncoding.UTF8.GetBytes(result));
+            response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(result));
         }
 
         // response.Close(); // Closed by caller, not our business

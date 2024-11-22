@@ -87,7 +87,7 @@ partial class Application
                 string t = p.Type.ToString();
 
                 string? s = GetFromCIMObject(p.Type, p.Value);
-                if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") {c--; goto managementObjectsLoop; }
+                if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") { c--; goto managementObjectsLoop; }
                 props_processed.Add(new string?[5] { computername, classname, p.Name, t, s });
             }
             foreach (var p in props_processed) dbinsert(p);
@@ -117,25 +117,25 @@ partial class Application
         };
     }
 
-    string ObjectToString<type>(object o)
+    private string ObjectToString<Type>(object o)
     {
-        return o.GetType().IsArray ? ArrayToString<type>(o) :
-            (string.IsNullOrEmpty(((type)o).ToString()) ? "" : ((type)o).ToString()!);
+        return o.GetType().IsArray ? ArrayToString<Type>(o) :
+            (string.IsNullOrEmpty(((Type)o).ToString()) ? "" : ((Type)o).ToString()!);
     }
 
-    string ArrayToString<type>(object array)
+    private string ArrayToString<Type>(object array)
     {
         string res = "[";
-        foreach (type a in (array as Array)!)
+        foreach (Type a in (array as Array)!)
         {
-            res += ((type)a).ToString() + ", ";
+            res += ((Type)a).ToString() + ", ";
         }
         res += "]";
         res = res.Replace(", ]", "]");
         return res;
     }
 
-    List<string> GetComputers()
+    private List<string> GetComputers()
     {
         // var fcomputers = new StreamReader("./computers");
         // List<string> computers = new List<string> { };
@@ -147,10 +147,10 @@ partial class Application
         return GetADComputers();
     }
 
-    List<string> GetClasses()
+    private List<string> GetClasses()
     {
         var fclasses = new StreamReader("./classes");
-        List<string> classes = new List<string> { };
+        List<string> classes = new() { };
         while (!fclasses.EndOfStream)
             classes.Add(fclasses.ReadLine()!);
 
@@ -158,14 +158,14 @@ partial class Application
         return classes;
     }
 
-    List<string> GetADComputers()
+    private List<string> GetADComputers()
     {
-        List<string> computerNames = new List<string>();
+        List<string> computerNames = new();
         if (!OperatingSystem.IsWindows()) return computerNames;
 
         var domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain();
 
-        using (DirectoryEntry entry = new DirectoryEntry(@$"LDAP://{domain.Name}"))
+        using (DirectoryEntry entry = new(@$"LDAP://{domain.Name}"))
         {
             using (DirectorySearcher mySearcher = new(entry))
             {

@@ -16,7 +16,7 @@ partial class Application
         }
         catch (Exception e)
         {
-            System.Console.WriteLine("ERROR: " + e.Message);
+            Console.WriteLine("ERROR: " + e.Message);
             return e.Message;
         }
 
@@ -30,10 +30,10 @@ partial class Application
                     },
                     Object))
             {
-                try { o.InvokeMethod(Method, new object[] { }); return o.ToString(); }
+                try { _ = o.InvokeMethod(Method, Array.Empty<object>()); return o.ToString(); }
                 catch (Exception e)
                 {
-                    System.Console.WriteLine("ERROR: " + e.Message);
+                    Console.WriteLine("ERROR: " + e.Message);
                     return e.Message;
                 }
             }
@@ -47,7 +47,7 @@ partial class Application
         if (prop == "") return true;
         foreach (var property in props)
         {
-            if (property.Name == prop && property.Value != null && getFromCIMObject(property.Type, property.Value) == value) return true;
+            if (property.Name == prop && property.Value != null && GetFromCIMObject(property.Type, property.Value) == value) return true;
         }
         return false;
     }

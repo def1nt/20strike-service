@@ -2,7 +2,7 @@ namespace _20strike;
 
 class TaskHandler
 {
-    List<Task> Tasks = null!;
+    readonly List<Task> Tasks = null!;
 
     public bool Empty { get; set; }
 
@@ -47,7 +47,5 @@ class TaskHandler
     {
         while (!AllReady()) Thread.Sleep(100);
         return Task.FromResult<bool>(true);
-        // return true;
     }
-
 }

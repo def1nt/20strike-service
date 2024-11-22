@@ -39,39 +39,35 @@ partial class Application
 
     void cleanup(string Pc, string Class)
     {
-        SqliteCommand comm = new SqliteCommand();
-        comm.CommandText = @"DELETE FROM data WHERE pc=$pc AND class=$class";
+        SqliteCommand comm = new(@"DELETE FROM data WHERE pc=$pc AND class=$class", conn);
         comm.Parameters.AddWithValue("$pc", Pc);
         comm.Parameters.AddWithValue("$class", Class);
-        comm.Connection = conn;
         comm.ExecuteNonQuery();
     }
 
     object[] read(string computername, string classname)
     {
         if (classname == "brief") { return readBrief(computername); }
-        SqliteCommand comm = new SqliteCommand();
+        SqliteCommand comm = new(@"SELECT t.class, t.param, t.value FROM data t WHERE pc LIKE $pc AND class LIKE $class", conn);
         if (computername == "*") { computername = "%"; }
         if (classname == "*") { classname = "%"; }
-        comm.CommandText = @"SELECT t.class, t.param, t.value FROM data t WHERE pc LIKE $pc AND class LIKE $class";
         comm.Parameters.AddWithValue("$pc", computername);
         comm.Parameters.AddWithValue("$class", classname);
-        comm.Connection = conn;
         SqliteDataReader reader = comm.ExecuteReader();
         int c = reader.FieldCount;
-        if (!reader.HasRows) return new object[]{};
+        if (!reader.HasRows) return Array.Empty<object>();
 
-        List<Dictionary<string, string>> d = new List<Dictionary<string, string>>(){};
+        List<Dictionary<string, string>> d = new() { };
 
-        if (rows == null) rows = reader.GetSchemaTable().Rows; // Very slow so cached in global static
+        rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
 
         while (reader.Read())
         {
-            Dictionary<string, string> dt = new Dictionary<string, string>{};
+            Dictionary<string, string> dt = new Dictionary<string, string> { };
 
             for (int i = 0; i < c; i++)
             {
-                dt.Add((rows[i])[0].ToString()!, reader.GetString(i));
+                dt.Add(rows[i][0].ToString()!, reader.GetString(i));
             }
             d.Add(dt);
         }
@@ -81,28 +77,28 @@ partial class Application
 
     object[] readBrief(string computername)
     {
-        SqliteCommand comm = new SqliteCommand();
+        SqliteCommand comm = new();
         if (computername == "*") { computername = "%"; }
-        comm.CommandText = @$"select t.class, t.param, t.value from data t
-join schema_tab sc on sc.class=t.class and sc.param=t.param
-where pc LIKE $pc";
+        comm.CommandText = @$"SELECT t.class, t.param, t.value FROM data t
+JOIN schema_tab sc ON sc.class=t.class AND sc.param=t.param
+WHERE pc LIKE $pc";
         comm.Parameters.AddWithValue("$pc", computername);
         comm.Connection = conn;
         SqliteDataReader reader = comm.ExecuteReader();
         int c = reader.FieldCount;
-        if (!reader.HasRows) return new object[]{};
+        if (!reader.HasRows) return Array.Empty<object>();
 
-        List<Dictionary<string, string>> d = new List<Dictionary<string, string>>(){};
+        List<Dictionary<string, string>> d = new() { };
 
-        if (rows == null) rows = reader.GetSchemaTable().Rows; // Very slow so cached in global static
+        rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
 
         while (reader.Read())
         {
-            Dictionary<string, string> dt = new Dictionary<string, string>{};
+            Dictionary<string, string> dt = new() { };
 
             for (int i = 0; i < c; i++)
             {
-                dt.Add((rows[i])[0].ToString()!, reader.GetString(i));
+                dt.Add(rows[i][0].ToString()!, reader.GetString(i));
             }
             d.Add(dt);
         }
@@ -114,7 +110,7 @@ where pc LIKE $pc";
     {
         var computerNamesFact = GetComputers();
 
-        string query = "Select distinct pc from data";
+        string query = "SELECT DISTINCT pc FROM data";
         var computerNamesSaved = new List<string>();
         using (var cmd = new SqliteCommand(query, conn))
         {
@@ -130,7 +126,7 @@ where pc LIKE $pc";
         var computerNamesToDelete = computerNamesSaved.Except(computerNamesFact);
         foreach (var computerName in computerNamesToDelete)
         {
-            query = $"delete from data where pc = '{computerName}'";
+            query = $"DELETE FROM data WHERE pc = '{computerName}'";
             using (var cmd = new SqliteCommand(query, conn))
             {
                 cmd.ExecuteNonQuery();

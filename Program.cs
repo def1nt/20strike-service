@@ -17,21 +17,21 @@ partial class Application
     }
 
     public CancellationToken cancellationToken;
-    TaskHandler taskhandler;
-    SqliteConnection conn;
-    HttpListener listener = new HttpListener();
+    readonly TaskHandler taskhandler;
+    readonly SqliteConnection conn;
+    readonly HttpListener listener = new();
     static int pollerProgress = 0;
 
-    public void stop()
+    public void Stop()
     {
-        System.Console.WriteLine("Stopping properly...");
+        Console.WriteLine("Stopping properly...");
         listener.Stop();
     }
 
-    public async Task start()
+    public async Task Start()
     {
         ParseArgs();
-        AutoUpdate();
+        _ = AutoUpdate();
 
         using (var fi = new StreamReader("./prefixes"))
         {
@@ -42,14 +42,14 @@ partial class Application
         }
 
         listener.Start();
-        System.Console.WriteLine($"Listening at {listener.Prefixes.First()}...");
+        Console.WriteLine($"Listening at {listener.Prefixes.First()}...");
 
         while (listener.IsListening)
         {
             HttpListenerContext context;
             try { context = await listener.GetContextAsync(); }
             catch (HttpListenerException) { continue; }
-            catch (Exception e) { System.Console.WriteLine(e.Message); throw; }
+            catch (Exception e) { Console.WriteLine(e.Message); throw; }
 
             var request = context.Request;
             var Response = context.Response;
@@ -61,13 +61,13 @@ partial class Application
             Dictionary<string, string> req;
             try
             {
-                string reqtext = (new StreamReader(request.InputStream, request.ContentEncoding)).ReadToEnd();
-                System.Console.WriteLine(reqtext);
+                string reqtext = new StreamReader(request.InputStream, request.ContentEncoding).ReadToEnd();
+                Console.WriteLine(reqtext);
                 req = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(reqtext)!;
             }
             catch (Exception e)
             {
-                System.Console.WriteLine("ERROR: " + e.Message);
+                Console.WriteLine("ERROR: " + e.Message);
                 Response.Close();
                 continue;
             }
@@ -88,28 +88,28 @@ partial class Application
             }
             catch (Exception e)
             {
-                System.Console.WriteLine(e.Message);
+                Console.WriteLine(e.Message);
             }
             finally
             {
                 try { Response.Close(); }
-                catch (Exception e) { System.Console.WriteLine("ERROR: " + e.Message); }
+                catch (Exception e) { Console.WriteLine("ERROR: " + e.Message); }
             }
 
         }
         listener.Close();
         await taskhandler.WaitAll();
-        System.Console.WriteLine("Stopped.");
+        Console.WriteLine("Stopped.");
     }
 
-    public async void AutoUpdate()
+    public async Task AutoUpdate()
     {
         PruneData();
-        if (!new System.DayOfWeek[] { System.DayOfWeek.Saturday, System.DayOfWeek.Sunday }.Contains(DateTime.Today.DayOfWeek))
+        if (DateTime.Today.DayOfWeek != DayOfWeek.Sunday && DateTime.Today.DayOfWeek != DayOfWeek.Saturday)
             await QueryAll();
-        System.Console.WriteLine(DateTime.Now.ToString());
+        Console.WriteLine(DateTime.Now.ToString());
         await Task.Delay(new TimeSpan(3, 0, 0), cancellationToken);
         if (cancellationToken.IsCancellationRequested) return;
-        AutoUpdate();
+        _ = AutoUpdate();
     }
 }

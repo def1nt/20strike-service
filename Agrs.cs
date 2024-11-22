@@ -4,10 +4,11 @@ namespace _20strike;
 
 partial class Application
 {
-    public void ParseArgs()
+    public static void ParseArgs()
     {
         string[] args = Environment.CommandLine.Split();
-        if (args.Length == 1) {
+        if (args.Length == 1)
+        {
             ShowHelpAndExit();
         }
         for (int i = 1; i < args.Length; i++)
@@ -26,7 +27,8 @@ partial class Application
         }
     }
 
-    public void ShowHelpAndExit(){
+    public static void ShowHelpAndExit()
+    {
         Console.WriteLine("20-strike backend service");
         Console.WriteLine("Command line parameters:");
         Console.WriteLine("help \t\t : or without args to display this");
@@ -37,7 +39,7 @@ partial class Application
         return;
     }
 
-    public async void RegisterService()
+    public static async void RegisterService()
     {
         var p = new Process
         {
@@ -51,19 +53,25 @@ partial class Application
         if (p.Start())
         {
             await p.WaitForExitAsync();
-            if (p.ExitCode == 0) {
+            if (p.ExitCode == 0)
+            {
                 Console.WriteLine("Probably registered...\nIMPORTANT: go to services and check login credentials\nexiting...");
-                Environment.Exit(0); }
-            else {
+                Environment.Exit(0);
+            }
+            else
+            {
                 Console.WriteLine("Registration failed, probably check for current user rights and run escalated");
-                Environment.Exit(1); }
-        } else {
+                Environment.Exit(1);
+            }
+        }
+        else
+        {
             Console.WriteLine("Could not start cmd or sc.exe to register the service.");
             Environment.Exit(1);
         }
     }
 
-    public async void UnregisterService()
+    public static async void UnregisterService()
     {
         var p = new Process
         {
@@ -77,13 +85,19 @@ partial class Application
         if (p.Start())
         {
             await p.WaitForExitAsync();
-            if (p.ExitCode == 0) {
+            if (p.ExitCode == 0)
+            {
                 Console.WriteLine("Probably unregistered, exiting...");
-                Environment.Exit(0); }
-            else {
+                Environment.Exit(0);
+            }
+            else
+            {
                 Console.WriteLine("Unregistration failed, probably check for current user rights and run escalated");
-                Environment.Exit(1); }
-        } else {
+                Environment.Exit(1);
+            }
+        }
+        else
+        {
             Console.WriteLine("Could not start cmd or sc.exe to unregister the service.");
             Environment.Exit(1);
         }

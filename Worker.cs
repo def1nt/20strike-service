@@ -13,13 +13,15 @@ public class Worker : BackgroundService
     {
         if (!OperatingSystem.IsWindows()) return;
         _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now); // I don't understand this
-        Environment.CurrentDirectory = System.AppContext.BaseDirectory;
+        Environment.CurrentDirectory = AppContext.BaseDirectory;
         try
         {
-            Application app = new Application();
-            app.cancellationToken = stoppingToken;
-            stoppingToken.Register(() => app.stop());
-            await app.start(); // It does need to be async to not to hang app
+            Application app = new()
+            {
+                cancellationToken = stoppingToken
+            };
+            stoppingToken.Register(app.Stop);
+            await app.Start(); // It does need to be async to not to hang app
         }
         catch (Exception e)
         {

@@ -16,8 +16,8 @@ partial class Application
         }
         catch (Exception e)
         {
-            if (e is System.IO.IOException) { System.Console.WriteLine($"ERROR: {e.Message}"); return 1; }
-            throw e;
+            if (e is IOException) { Console.WriteLine($"ERROR: {e.Message}"); return 1; }
+            throw;
         }
         cleanup(computername, "Meta_Software");
         RegistryKey? key = anotherkey.OpenSubKey(path);
@@ -33,16 +33,14 @@ partial class Application
         {
             try
             {
-                using (RegistryKey? usertree = anotherkey.OpenSubKey(user))
-                {
-                    if (usertree == null) continue;
-                    key = usertree.OpenSubKey(path);
-                    if (key != null) AddToDB(key, computername);
-                }
+                using RegistryKey? usertree = anotherkey.OpenSubKey(user);
+                if (usertree == null) continue;
+                key = usertree.OpenSubKey(path);
+                if (key != null) AddToDB(key, computername);
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"ERROR: {e.Message}");
+                Console.WriteLine($"ERROR: {e.Message}");
                 continue;
             }
         }
@@ -54,20 +52,18 @@ partial class Application
     {
         if (!OperatingSystem.IsWindows()) return;
         var softwarelist = rk.GetSubKeyNames();
-        Func<object?, string> unnull = (x => x != null ? x.ToString()! : "");
+        static string unnull(object? x) => x != null ? x.ToString()! : "";
         foreach (string software in softwarelist)
         {
-            using (RegistryKey? softwareinfo = rk.OpenSubKey(software))
+            using RegistryKey? softwareinfo = rk.OpenSubKey(software);
+            if (softwareinfo == null) continue;
+
+            string[] POIKeys = { "DisplayName", "DisplayVersion", "EstimatedSize", "InstallDate", "InstallLocation", "Publisher", "URLInfoAbout" };
+
+            if (unnull(softwareinfo.GetValue("DisplayName")) == "") continue;
+            foreach (string key in POIKeys)
             {
-                if (softwareinfo == null) continue;
-
-                string[] POIKeys = { "DisplayName", "DisplayVersion", "EstimatedSize", "InstallDate", "InstallLocation", "Publisher", "URLInfoAbout" };
-
-                if (unnull(softwareinfo.GetValue("DisplayName")) == "") continue;
-                foreach (string key in POIKeys)
-                {
-                    dbinsert(new string?[] { computername, "Meta_Software", key, "String", unnull(softwareinfo.GetValue(key)) });
-                }
+                dbinsert(new string?[] { computername, "Meta_Software", key, "String", unnull(softwareinfo.GetValue(key)) });
             }
         }
     }
