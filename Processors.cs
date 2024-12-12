@@ -15,15 +15,15 @@ partial class Application
 
             if (target == "computers")
             {
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(serialize(GetComputers())));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(GetComputers())));
             }
             if (target == "classes")
             {
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(serialize(GetClasses())));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(GetClasses())));
             }
             if (target == "users")
             {
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(serialize(GetUsers())));
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(AD.GetUsers())));
             }
             if (target == "info")
             {
@@ -31,8 +31,8 @@ partial class Application
                 string classname = "";
                 if (!request.ContainsKey("pc") || string.IsNullOrEmpty(computername = request["pc"])) computername = "*"; // Trying to one-line two checks and assignment
                 if (!request.ContainsKey("class") || string.IsNullOrEmpty(classname = request["class"])) classname = "*";
-                var data = read(computername, classname);
-                var bytes = System.Text.Encoding.UTF8.GetBytes(serialize(data));
+                var data = DBRead(computername, classname);
+                var bytes = System.Text.Encoding.UTF8.GetBytes(Serialize(data));
                 response.OutputStream.Write(bytes);
             }
         }
@@ -65,5 +65,5 @@ partial class Application
         // response.Close(); // Closed by caller, not our business
     }
 
-    string serialize(object data) => JsonSerializer.Serialize(data);
+    private string Serialize(object data) => JsonSerializer.Serialize(data);
 }

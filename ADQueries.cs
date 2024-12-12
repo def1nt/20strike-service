@@ -2,7 +2,7 @@ using System.DirectoryServices;
 
 namespace _20strike;
 
-partial class Application
+static class AD
 {
     public const string SamAccountNameProperty = "SamAccountName";
     public const string CanonicalNameProperty = "CN";
@@ -13,10 +13,10 @@ partial class Application
         public string SamAcountName { get; set; }
     }
 
-    public Dictionary<string, string> GetUsers()
+    public static Dictionary<string, string> GetUsers()
     {
-        List<ADUser> users = new();
-        if (!OperatingSystem.IsWindows()) return new Dictionary<string, string> { };
+        List<ADUser> users = [];
+        if (!OperatingSystem.IsWindows()) return [];
         var domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain();
         using (DirectoryEntry searchRoot = new(@$"LDAP://{domain.Name}"))
         using (DirectorySearcher directorySearcher = new(searchRoot))
@@ -47,9 +47,38 @@ partial class Application
             }
         }
 
-        return new Dictionary<string, string>(
+        return new(
             users.Where(u => !string.IsNullOrEmpty(u.SamAcountName))
             .DistinctBy(u => u.SamAcountName).OrderBy(u => u.SamAcountName)
             .Select(u => new KeyValuePair<string, string>(u.SamAcountName, u.CN)));
+    }
+
+    public static List<string> GetComputers()
+    {
+        List<string> computerNames = [];
+        if (!OperatingSystem.IsWindows()) return computerNames;
+
+        var domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain();
+
+        using (DirectoryEntry entry = new(@$"LDAP://{domain.Name}"))
+        {
+            using DirectorySearcher mySearcher = new(entry);
+            mySearcher.Filter = "(objectClass=computer)";
+            mySearcher.SizeLimit = 0;
+            mySearcher.PageSize = 250;
+            mySearcher.PropertiesToLoad.Add("name");
+
+            foreach (SearchResult resEnt in mySearcher.FindAll())
+            {
+                if (resEnt.Properties["name"].Count > 0)
+                {
+                    string computerName = (string)resEnt.Properties["name"][0];
+                    computerNames.Add(computerName);
+                }
+            }
+        }
+
+        computerNames.Sort();
+        return computerNames;
     }
 }

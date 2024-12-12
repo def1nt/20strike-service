@@ -7,17 +7,9 @@ partial class Application
 {
     static DataRowCollection rows = null!;
 
-    void doconnect()
+    private int DBInsert(string?[] fields)
     {
-        var conn = new SqliteConnection();
-        conn.Open();
-        conn.Close();
-    }
-
-    int dbinsert(string?[] fields)
-    {
-        SqliteCommand comm = new SqliteCommand();
-        comm.CommandText = @"INSERT INTO data VALUES ($pc, $class, $param, $type, $value)";
+        SqliteCommand comm = new(@"INSERT INTO data VALUES ($pc, $class, $param, $type, $value)");
         comm.Parameters.AddWithValue("$pc", fields[0]);
         comm.Parameters.AddWithValue("$class", fields[1]);
         comm.Parameters.AddWithValue("$param", fields[2]);
@@ -37,7 +29,7 @@ partial class Application
     //     comm.ExecuteNonQuery();
     // }
 
-    void cleanup(string Pc, string Class)
+    private void DBCleanup(string Pc, string Class)
     {
         SqliteCommand comm = new(@"DELETE FROM data WHERE pc=$pc AND class=$class", conn);
         comm.Parameters.AddWithValue("$pc", Pc);
@@ -45,9 +37,9 @@ partial class Application
         comm.ExecuteNonQuery();
     }
 
-    object[] read(string computername, string classname)
+    private object[] DBRead(string computername, string classname)
     {
-        if (classname == "brief") { return readBrief(computername); }
+        if (classname == "brief") { return DBReadBrief(computername); }
         SqliteCommand comm = new(@"SELECT t.class, t.param, t.value FROM data t WHERE pc LIKE $pc AND class LIKE $class", conn);
         if (computername == "*") { computername = "%"; }
         if (classname == "*") { classname = "%"; }
@@ -55,15 +47,15 @@ partial class Application
         comm.Parameters.AddWithValue("$class", classname);
         SqliteDataReader reader = comm.ExecuteReader();
         int c = reader.FieldCount;
-        if (!reader.HasRows) return Array.Empty<object>();
+        if (!reader.HasRows) return [];
 
-        List<Dictionary<string, string>> d = new() { };
+        List<Dictionary<string, string>> d = [];
 
         rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
 
         while (reader.Read())
         {
-            Dictionary<string, string> dt = new Dictionary<string, string> { };
+            Dictionary<string, string> dt = [];
 
             for (int i = 0; i < c; i++)
             {
@@ -75,7 +67,7 @@ partial class Application
         return d.ToArray<Dictionary<string, string>>();
     }
 
-    object[] readBrief(string computername)
+    private object[] DBReadBrief(string computername)
     {
         SqliteCommand comm = new();
         if (computername == "*") { computername = "%"; }
@@ -86,15 +78,15 @@ WHERE pc LIKE $pc";
         comm.Connection = conn;
         SqliteDataReader reader = comm.ExecuteReader();
         int c = reader.FieldCount;
-        if (!reader.HasRows) return Array.Empty<object>();
+        if (!reader.HasRows) return [];
 
-        List<Dictionary<string, string>> d = new() { };
+        List<Dictionary<string, string>> d = [];
 
         rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
 
         while (reader.Read())
         {
-            Dictionary<string, string> dt = new() { };
+            Dictionary<string, string> dt = [];
 
             for (int i = 0; i < c; i++)
             {
@@ -106,7 +98,7 @@ WHERE pc LIKE $pc";
         return d.ToArray<Dictionary<string, string>>();
     }
 
-    public void PruneData()
+    private void PruneData()
     {
         var computerNamesFact = GetComputers();
 
@@ -114,12 +106,10 @@ WHERE pc LIKE $pc";
         var computerNamesSaved = new List<string>();
         using (var cmd = new SqliteCommand(query, conn))
         {
-            using (var reader = cmd.ExecuteReader())
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
             {
-                while (reader.Read())
-                {
-                    computerNamesSaved.Add(reader.GetString(0));
-                }
+                computerNamesSaved.Add(reader.GetString(0));
             }
         }
 
@@ -127,13 +117,11 @@ WHERE pc LIKE $pc";
         foreach (var computerName in computerNamesToDelete)
         {
             query = $"DELETE FROM data WHERE pc = '{computerName}'";
-            using (var cmd = new SqliteCommand(query, conn))
-            {
-                cmd.ExecuteNonQuery();
-            }
+            using var cmd = new SqliteCommand(query, conn);
+            cmd.ExecuteNonQuery();
         }
 
-        using (var cmd = new SqliteCommand("vacuum", conn))
+        using (var cmd = new SqliteCommand("VACUUM", conn))
         {
             cmd.ExecuteNonQuery();
         }

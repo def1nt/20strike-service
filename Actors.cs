@@ -4,7 +4,7 @@ namespace _20strike;
 
 partial class Application
 {
-    string InvokeMethod(string Computer, string Class, string Method, string Object = "")
+    private static string InvokeMethod(string Computer, string Class, string Method, string Object = "")
     {
         if (!OperatingSystem.IsWindows()) return "Wrong OS";
         var mp = new ManagementPath($@"\\{Computer}\root\cimv2:{Class}");
@@ -30,7 +30,7 @@ partial class Application
                     },
                     Object))
             {
-                try { _ = o.InvokeMethod(Method, Array.Empty<object>()); return o.ToString(); }
+                try { _ = o.InvokeMethod(Method, []); return o.ToString(); }
                 catch (Exception e)
                 {
                     Console.WriteLine("ERROR: " + e.Message);
@@ -41,7 +41,7 @@ partial class Application
         return "Empty result";
     }
 
-    bool ContainsPropWithValue(PropertyDataCollection props, string prop, string value)
+    private static bool ContainsPropWithValue(PropertyDataCollection props, string prop, string value)
     {
         if (!OperatingSystem.IsWindows()) return false;
         if (prop == "") return true;

@@ -1,14 +1,13 @@
 using System.Management;
-using System.DirectoryServices;
 
 namespace _20strike;
 
 partial class Application
 {
-    async Task<int> QueryAll()
+    private async Task QueryAll()
     {
         List<string> computers = GetComputers();
-        Dictionary<string, string> users = GetUsers(); // Do I really need it here, if it's requeried on every request?
+        Dictionary<string, string> users = AD.GetUsers(); // Do I really need it here, if it's requeried on every request?
 
         int total = computers.Count, current = 0;
         pollerProgress = 0;
@@ -22,10 +21,9 @@ partial class Application
             pollerProgress = current * 100 / total;
         }
         Console.WriteLine("Done updating");
-        return current;
     }
 
-    int QueryComputer(string? Computer)
+    private void QueryComputer(string? Computer)
     {
         List<string> classes = GetClasses();
 
@@ -51,10 +49,9 @@ partial class Application
                 Console.WriteLine($"ERROR Неизвестная ошибка: {error.Message}");
             }
         }
-        return 0;
     }
 
-    int QueryComputerClass(string? computername, string? classname)
+    private int QueryComputerClass(string? computername, string? classname)
     {
         if (!OperatingSystem.IsWindows()) return 1;
         if (computername == null || classname == null) return 1;
@@ -73,13 +70,13 @@ partial class Application
             Console.WriteLine($"ERROR Unsupported class {classname} on {computername}");
             return 1;
         }
-        cleanup(computername, classname);
+        DBCleanup(computername, classname);
         int c = 0;
         foreach (ManagementObject o in mo)
         {
             if (c++ > 9 && classname == "Win32_NTLogEvent") break;
             PropertyDataCollection props = o.Properties;
-            List<string?[]> props_processed = new() { };  // Deal with these nulls!
+            List<string?[]> props_processed = [];  // Deal with these nulls!
             foreach (var p in props)
             {
                 if (p.Value == null) continue;
@@ -88,16 +85,16 @@ partial class Application
 
                 string? s = GetFromCIMObject(p.Type, p.Value);
                 if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") { c--; goto managementObjectsLoop; }
-                props_processed.Add(new string?[5] { computername, classname, p.Name, t, s });
+                props_processed.Add([computername, classname, p.Name, t, s]);
             }
-            foreach (var p in props_processed) dbinsert(p);
+            foreach (var p in props_processed) DBInsert(p);
             managementObjectsLoop:;
         }
         // merge();
         return 0;
     }
 
-    string? GetFromCIMObject(CimType type, object value)
+    private static string? GetFromCIMObject(CimType type, object value)
     {
         if (!OperatingSystem.IsWindows()) return "ERROR WRONG OS";
         return type switch  // But sometimes this is not a scalar but an array HMMMMMMMMMMM
@@ -117,13 +114,13 @@ partial class Application
         };
     }
 
-    private string ObjectToString<Type>(object o)
+    private static string ObjectToString<Type>(object o)
     {
         return o.GetType().IsArray ? ArrayToString<Type>(o) :
             (string.IsNullOrEmpty(((Type)o).ToString()) ? "" : ((Type)o).ToString()!);
     }
 
-    private string ArrayToString<Type>(object array)
+    private static string ArrayToString<Type>(object array)
     {
         string res = "[";
         foreach (Type a in (array as Array)!)
@@ -135,7 +132,7 @@ partial class Application
         return res;
     }
 
-    private List<string> GetComputers()
+    private static List<string> GetComputers()
     {
         // var fcomputers = new StreamReader("./computers");
         // List<string> computers = new List<string> { };
@@ -144,48 +141,17 @@ partial class Application
 
         // fcomputers.Close();
         // return computers;
-        return GetADComputers();
+        return AD.GetComputers();
     }
 
-    private List<string> GetClasses()
+    private static List<string> GetClasses()
     {
         var fclasses = new StreamReader("./classes");
-        List<string> classes = new() { };
+        List<string> classes = [];
         while (!fclasses.EndOfStream)
             classes.Add(fclasses.ReadLine()!);
 
         fclasses.Close();
         return classes;
-    }
-
-    private List<string> GetADComputers()
-    {
-        List<string> computerNames = new();
-        if (!OperatingSystem.IsWindows()) return computerNames;
-
-        var domain = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain();
-
-        using (DirectoryEntry entry = new(@$"LDAP://{domain.Name}"))
-        {
-            using (DirectorySearcher mySearcher = new(entry))
-            {
-                mySearcher.Filter = "(objectClass=computer)";
-                mySearcher.SizeLimit = 0;
-                mySearcher.PageSize = 250;
-                mySearcher.PropertiesToLoad.Add("name");
-
-                foreach (SearchResult resEnt in mySearcher.FindAll())
-                {
-                    if (resEnt.Properties["name"].Count > 0)
-                    {
-                        string computerName = (string)resEnt.Properties["name"][0];
-                        computerNames.Add(computerName);
-                    }
-                }
-            }
-        }
-
-        computerNames.Sort();
-        return computerNames;
     }
 }

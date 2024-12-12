@@ -8,7 +8,7 @@ class TaskHandler
 
     public TaskHandler()
     {
-        Tasks = new List<Task> { };
+        Tasks = [];
         Empty = true;
     }
 
@@ -46,6 +46,6 @@ class TaskHandler
     public Task<bool> WaitAll()
     {
         while (!AllReady()) Thread.Sleep(100);
-        return Task.FromResult<bool>(true);
+        return Task.FromResult(true);
     }
 }

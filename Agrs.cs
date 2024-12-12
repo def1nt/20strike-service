@@ -17,8 +17,8 @@ partial class Application
             {
                 case "help": ShowHelpAndExit(); return;
                 case "start": return;
-                case "register": RegisterService(); return;
-                case "unregister": UnregisterService(); return;
+                case "register": _ = RegisterService(); return;
+                case "unregister": _ = UnregisterService(); return;
                 default:
                     Console.WriteLine($"Unkown command: '{args[i]}', terminating");
                     ShowHelpAndExit();
@@ -39,7 +39,7 @@ partial class Application
         return;
     }
 
-    public static async void RegisterService()
+    public static async Task RegisterService()
     {
         var p = new Process
         {
@@ -47,7 +47,7 @@ partial class Application
             {
                 FileName = "sc.exe",
                 WorkingDirectory = Environment.CurrentDirectory,
-                Arguments = $"create 20strike binPath=\"{Environment.CommandLine.Split()[0]} start\" start=auto"
+                Arguments = $"create 20strike binPath=\"{Environment.CommandLine.Split()[0]} start\" start= auto"
             }
         };
         if (p.Start())
@@ -71,7 +71,7 @@ partial class Application
         }
     }
 
-    public static async void UnregisterService()
+    public static async Task UnregisterService()
     {
         var p = new Process
         {
