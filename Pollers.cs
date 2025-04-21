@@ -26,13 +26,14 @@ partial class Application
     private void QueryComputer(string? Computer)
     {
         List<string> classes = GetClasses();
+        ComputerInfo computerInfo = new();
 
         foreach (string? Class in classes)
         {
             Console.WriteLine($"\nComputer: {Computer}, Class: {Class}");
             try
             {
-                QueryComputerClass(Computer, Class);
+                QueryComputerClass(Computer, Class, computerInfo);
             }
             catch (System.Runtime.InteropServices.COMException)
             {
@@ -49,13 +50,26 @@ partial class Application
                 Console.WriteLine($"ERROR Неизвестная ошибка: {error.Message}");
             }
         }
+        new Repository(computerInfo).SaveTo(Computer + ".json");
     }
 
-    private int QueryComputerClass(string? computername, string? classname)
+    private object GetClassInfo(string computername, Type type)
+    {
+        if (type is null) return default!;
+        if (type == typeof(int)) return PollSoftware(computername).ToArray() ?? [];
+        return null;
+    }
+
+    private int QueryComputerClass(string? computername, string? classname, ComputerInfo computerInfo)
     {
         if (!OperatingSystem.IsWindows()) return 1;
         if (computername == null || classname == null) return 1;
-        if (classname == "Meta_Software") return PollSoftware(computername);
+        if (classname == "Meta_Software")
+        {
+            var t = PollSoftware(computername);
+            computerInfo.Software = [.. t];
+            return 1;
+        }
         string WMIProvider = "cimv2";
         if (classname == "WmiMonitorID") WMIProvider = "wmi";
         var mp = new ManagementPath($@"\\{computername}\root\{WMIProvider}:{classname}");
@@ -87,6 +101,7 @@ partial class Application
                 if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") { c--; goto managementObjectsLoop; }
                 props_processed.Add([computername, classname, p.Name, t, s]);
             }
+            ProcessManagementObject(o, classname, computerInfo);
             foreach (var p in props_processed) DBInsert(p);
             managementObjectsLoop:;
         }
@@ -153,5 +168,126 @@ partial class Application
 
         fclasses.Close();
         return classes;
+    }
+
+    private void ProcessManagementObject(ManagementObject o, string classname, ComputerInfo computerInfo)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        switch (classname)
+        {
+            case "Win32_BIOS":
+                computerInfo.BIOS ??= new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    Vendor = o["Manufacturer"]?.ToString() ?? "",
+                    Version = o["Version"]?.ToString() ?? "",
+                    ReleaseDate = o["ReleaseDate"]?.ToString() ?? "",
+                };
+                break;
+            case "Win32_ComputerSystem":
+                computerInfo.ComputerSystem ??= new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    Domain = o["Domain"]?.ToString() ?? "",
+                    UserName = o["UserName"]?.ToString() ?? "",
+                };
+                break;
+            case "Win32_OperatingSystem":
+                computerInfo.OperatingSystem ??= new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    Version = o["Version"]?.ToString() ?? "",
+                    BuildNumber = o["BuildNumber"]?.ToString() ?? "",
+                    Architecture = o["OSArchitecture"]?.ToString() ?? "",
+                    InstallDate = o["InstallDate"]?.ToString() ?? "",
+                    LastBootUpTime = o["LastBootUpTime"]?.ToString() ?? "",
+                    LocalTime = o["LocalDateTime"]?.ToString() ?? "",
+                };
+                break;
+            case "Win32_Processor":
+                computerInfo.Processor ??= [];
+                ProcessorInfo pi = new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    ClockSpeed = o["CurrentClockSpeed"]?.ToString() ?? "",
+                    CacheSize = o["L3CacheSize"]?.ToString() ?? "",
+                    NumberOfCores = o["NumberOfCores"]?.ToString() ?? "",
+                    SocketType = o["SocketDesignation"]?.ToString() ?? ""
+                };
+                computerInfo.Processor = [.. computerInfo.Processor, pi];
+                break;
+            case "Win32_PhysicalMemory":
+                computerInfo.PhysicalMemory ??= [];
+                PhysicalMemoryInfo pmi = new()
+                {
+                    Capacity = o["Capacity"]?.ToString() ?? "",
+                    Manufacturer = o["Manufacturer"]?.ToString() ?? "",
+                    SerialNumber = o["SerialNumber"]?.ToString() ?? "",
+                    ClockSpeed = o["Speed"]?.ToString() ?? ""
+                };
+                computerInfo.PhysicalMemory = [.. computerInfo.PhysicalMemory, pmi];
+                break;
+            case "Win32_DiskDrive":
+                computerInfo.PhysicalDisk ??= [];
+                PhysicalDiskInfo pdi = new()
+                {
+                    Model = o["Model"]?.ToString() ?? "",
+                    SerialNumber = o["SerialNumber"]?.ToString() ?? "",
+                    Size = o["Size"]?.ToString() ?? "",
+                    InterfaceType = o["InterfaceType"]?.ToString() ?? ""
+                };
+                computerInfo.PhysicalDisk = [.. computerInfo.PhysicalDisk, pdi];
+                break;
+            case "Win32_LogicalDisk":
+                computerInfo.LogicalDisk ??= [];
+                LogicalDiskInfo ldi = new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    Size = o["Size"]?.ToString() ?? "",
+                    FreeSpace = o["FreeSpace"]?.ToString() ?? "",
+                    FileSystem = o["FileSystem"]?.ToString() ?? "Unknown",
+                    DriveType = o["DriveType"]?.ToString() ?? ""
+                };
+                computerInfo.LogicalDisk = [.. computerInfo.LogicalDisk, ldi];
+                break;
+            case "Win32_VideoController":
+                computerInfo.VideoController ??= [];
+                VideoControllerInfo vci = new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    DriverVersion = o["DriverVersion"]?.ToString() ?? ""
+                };
+                computerInfo.VideoController = [.. computerInfo.VideoController, vci];
+                break;
+            case "WmiMonitorID":
+                computerInfo.Monitor ??= [];
+                MonitorInfo mi = new()
+                {
+                    Name = o["InstanceName"]?.ToString() ?? ""
+                };
+                computerInfo.Monitor = [.. computerInfo.Monitor, mi];
+                break;
+            case "Win32_NetworkAdapter":
+                computerInfo.NetworkAdapter ??= [];
+                NetworkAdapterInfo nai = new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    MacAddress = o["MACAddress"]?.ToString() ?? ""
+                };
+                computerInfo.NetworkAdapter = [.. computerInfo.NetworkAdapter, nai];
+                break;
+            case "Win32_Printer":
+                computerInfo.Printer ??= [];
+                PrinterInfo pri = new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    PaperSize = o["PrinterPaperNames"]?.ToString() ?? "",
+                    PortName = o["PortName"]?.ToString() ?? ""
+                };
+                computerInfo.Printer = [.. computerInfo.Printer, pri];
+                break;
+            default:
+                break;
+        }
     }
 }
