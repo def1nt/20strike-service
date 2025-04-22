@@ -65,5 +65,5 @@ partial class Application
         // response.Close(); // Closed by caller, not our business
     }
 
-    private string Serialize(object data) => JsonSerializer.Serialize(data);
+    private static string Serialize(object data) => JsonSerializer.Serialize(data);
 }

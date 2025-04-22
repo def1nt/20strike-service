@@ -45,7 +45,6 @@ partial class Application
                 continue;
             }
         }
-        // merge();
         return softwareinfo;
     }
 

@@ -51,7 +51,7 @@ partial class Application
                 Console.WriteLine($"ERROR Неизвестная ошибка: {error.Message}");
             }
         }
-        new Repository(computerInfo).SaveTo(Computer + ".json");
+        new Repository(computerInfo).Save();
     }
 
     private int QueryComputerClass(string? computername, string? classname, ComputerInfo computerInfo)

@@ -19,16 +19,6 @@ partial class Application
         return comm.ExecuteNonQuery();
     }
 
-    // void merge()
-    // {
-    //     SqliteCommand comm = new SqliteCommand();
-    //     comm.CommandText = @"INSERT INTO data (pc, class, param, type, value)
-    //             SELECT pc, class, param, type, value FROM temp;
-    //             DELETE FROM temp";
-    //     comm.Connection = conn;
-    //     comm.ExecuteNonQuery();
-    // }
-
     private void DBCleanup(string Pc, string Class)
     {
         SqliteCommand comm = new(@"DELETE FROM data WHERE pc=$pc AND class=$class", conn);
