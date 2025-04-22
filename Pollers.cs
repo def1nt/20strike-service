@@ -15,7 +15,7 @@ partial class Application
         foreach (string? Computer in computers)
         {
             current++;
-            await Task.Delay(60000, cancellationToken);
+            await Task.Delay(30000, cancellationToken);
             if (cancellationToken.IsCancellationRequested) break;
             taskhandler.AddAction(() => QueryComputer(Computer)); // TODO утекает и не проверяется завершение
             pollerProgress = current * 100 / total;
@@ -25,8 +25,9 @@ partial class Application
 
     private void QueryComputer(string? Computer)
     {
+        if (Computer == null) return;
         List<string> classes = GetClasses();
-        ComputerInfo computerInfo = new();
+        ComputerInfo computerInfo = new(Computer);
 
         foreach (string? Class in classes)
         {
@@ -51,13 +52,6 @@ partial class Application
             }
         }
         new Repository(computerInfo).SaveTo(Computer + ".json");
-    }
-
-    private object GetClassInfo(string computername, Type type)
-    {
-        if (type is null) return default!;
-        if (type == typeof(int)) return PollSoftware(computername).ToArray() ?? [];
-        return null;
     }
 
     private int QueryComputerClass(string? computername, string? classname, ComputerInfo computerInfo)
@@ -105,7 +99,6 @@ partial class Application
             foreach (var p in props_processed) DBInsert(p);
             managementObjectsLoop:;
         }
-        // merge();
         return 0;
     }
 
@@ -140,7 +133,7 @@ partial class Application
         string res = "[";
         foreach (Type a in (array as Array)!)
         {
-            res += ((Type)a).ToString() + ", ";
+            res += a.ToString() + ", ";
         }
         res += "]";
         res = res.Replace(", ]", "]");
@@ -285,6 +278,17 @@ partial class Application
                     PortName = o["PortName"]?.ToString() ?? ""
                 };
                 computerInfo.Printer = [.. computerInfo.Printer, pri];
+                break;
+            case "Win32_Process":
+                computerInfo.Process ??= [];
+                ProcessInfo psi = new()
+                {
+                    Name = o["Name"]?.ToString() ?? "",
+                    ProcessId = o["ProcessId"]?.ToString() ?? "",
+                    WorkingSetSize = o["WorkingSetSize"]?.ToString() ?? "",
+                    CreationDate = o["CreationDate"]?.ToString() ?? ""
+                };
+                computerInfo.Process = [.. computerInfo.Process, psi];
                 break;
             default:
                 break;

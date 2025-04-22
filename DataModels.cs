@@ -1,7 +1,8 @@
 namespace _20strike;
 
-public sealed class ComputerInfo
+public sealed class ComputerInfo(string name)
 {
+    public string Name = name;
     // BIOS - name, vendor, version, release date
     public BIOSInfo? BIOS { get; set; }
     // Computer system - name, domain, user name
@@ -26,6 +27,8 @@ public sealed class ComputerInfo
     public PrinterInfo[]? Printer { get; set; }
     // Software - name, version, install date, install location, estimated size
     public SoftwareInfo[]? Software { get; set; }
+    // Processes - name, memory usage, cpu usage
+    public ProcessInfo[]? Process { get; set; }
 }
 
 public sealed class BIOSInfo(string name, string vendor, string version, string releaseDate)
@@ -131,4 +134,13 @@ public sealed class SoftwareInfo(string name, string version, string installDate
     public string InstallLocation { get; set; } = installLocation;
     public string EstimatedSize { get; set; } = estimatedSize;
     public SoftwareInfo() : this("", "", "", "", "") { }
+}
+
+public sealed class ProcessInfo(string name, string processId, string workingSetSize, string creationDate)
+{
+    public string Name { get; set; } = name;
+    public string ProcessId { get; set; } = processId;
+    public string WorkingSetSize { get; set; } = workingSetSize;
+    public string CreationDate { get; set; } = creationDate;
+    public ProcessInfo() : this("", "", "", "") { }
 }
