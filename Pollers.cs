@@ -6,10 +6,10 @@ partial class Application
 {
     private async Task QueryAll()
     {
-        List<string> computers = GetComputers();
+        string[] computers = GetComputers();
         Dictionary<string, string> users = AD.GetUsers(); // Do I really need it here, if it's requeried on every request?
 
-        int total = computers.Count, current = 0;
+        int total = computers.Length, current = 0;
         pollerProgress = 0;
 
         foreach (string? Computer in computers)
@@ -26,7 +26,7 @@ partial class Application
     private void QueryComputer(string? Computer)
     {
         if (Computer == null) return;
-        List<string> classes = GetClasses();
+        string[] classes = GetClasses();
         ComputerInfo computerInfo = new(Computer);
 
         foreach (string? Class in classes)
@@ -54,15 +54,15 @@ partial class Application
         new Repository(computerInfo).Save();
     }
 
-    private int QueryComputerClass(string? computername, string? classname, ComputerInfo computerInfo)
+    private void QueryComputerClass(string? computername, string? classname, ComputerInfo computerInfo)
     {
-        if (!OperatingSystem.IsWindows()) return 1;
-        if (computername == null || classname == null) return 1;
+        if (!OperatingSystem.IsWindows()) return;
+        if (computername == null || classname == null) return;
         if (classname == "Meta_Software")
         {
             var t = PollSoftware(computername);
             computerInfo.Software = [.. t];
-            return 1;
+            return;
         }
         string WMIProvider = "cimv2";
         if (classname == "WmiMonitorID") WMIProvider = "wmi";
@@ -76,7 +76,7 @@ partial class Application
         catch (ManagementException)
         {
             Console.WriteLine($"ERROR Unsupported class {classname} on {computername}");
-            return 1;
+            return;
         }
         DBCleanup(computername, classname);
         int c = 0;
@@ -84,14 +84,14 @@ partial class Application
         {
             if (c++ > 9 && classname == "Win32_NTLogEvent") break;
             PropertyDataCollection props = o.Properties;
-            List<string?[]> props_processed = [];  // Deal with these nulls!
+            List<string[]> props_processed = [];  // Deal with these nulls!
             foreach (var p in props)
             {
                 if (p.Value == null) continue;
 
                 string t = p.Type.ToString();
 
-                string? s = GetFromCIMObject(p.Type, p.Value);
+                string s = GetFromCIMObject(p.Type, p.Value);
                 if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") { c--; goto managementObjectsLoop; }
                 props_processed.Add([computername, classname, p.Name, t, s]);
             }
@@ -99,71 +99,51 @@ partial class Application
             foreach (var p in props_processed) DBInsert(p);
             managementObjectsLoop:;
         }
-        return 0;
     }
 
-    private static string? GetFromCIMObject(CimType type, object value)
+    private static string GetFromCIMObject(CimType type, object value)
     {
         if (!OperatingSystem.IsWindows()) return "ERROR WRONG OS";
         return type switch  // But sometimes this is not a scalar but an array HMMMMMMMMMMM
         {
-            CimType.String => ObjectToString<string>(value),
-            CimType.UInt8 => ObjectToString<System.Byte>(value),
-            CimType.UInt16 => ObjectToString<System.UInt16>(value),
-            CimType.UInt32 => ObjectToString<System.UInt32>(value),
-            CimType.UInt64 => ObjectToString<System.UInt64>(value),
-            CimType.SInt16 => ObjectToString<System.Int16>(value),
-            CimType.SInt32 => ObjectToString<System.Int32>(value),
-            CimType.SInt64 => ObjectToString<System.Int64>(value),
-            CimType.Boolean => ObjectToString<System.Boolean>(value),
-            CimType.DateTime => value.ToString(),
-            CimType.Reference => value.ToString(),
-            _ => "ERROR NIY"
+            CimType.String => ObjectToString(value),
+            CimType.UInt8 or CimType.UInt16 or CimType.UInt32 or CimType.UInt64 => ObjectToString(value),
+            CimType.SInt16 or CimType.SInt32 or CimType.SInt64 => ObjectToString(value),
+            CimType.Boolean => ObjectToString(value),
+            CimType.DateTime => value.ToString() ?? "null value",
+            CimType.Reference => value.ToString() ?? "null value",
+            _ => "UNKNOWN TYPE"
         };
     }
 
-    private static string ObjectToString<Type>(object o)
+    private static string ObjectToString(object o)
     {
-        return o.GetType().IsArray ? ArrayToString<Type>(o) :
-            (string.IsNullOrEmpty(((Type)o).ToString()) ? "" : ((Type)o).ToString()!);
-    }
-
-    private static string ArrayToString<Type>(object array)
-    {
-        string res = "[";
-        foreach (Type a in (array as Array)!)
+        if (o.GetType().IsArray)
         {
-            res += a.ToString() + ", ";
+            var enumerable = o as System.Collections.IEnumerable;
+            return "[" + string.Join(", ", enumerable.Cast<object>().Select(x => x.ToString())) + "]";
         }
-        res += "]";
-        res = res.Replace(", ]", "]");
-        return res;
+        return string.IsNullOrEmpty(o.ToString()) ? "" : o.ToString() ?? "";
     }
 
-    private static List<string> GetComputers()
+    private static string[] GetComputers()
     {
-        // var fcomputers = new StreamReader("./computers");
-        // List<string> computers = new List<string> { };
-        // while (!fcomputers.EndOfStream)
-        //     computers.Add(fcomputers.ReadLine()!);
-
-        // fcomputers.Close();
-        // return computers;
-        return AD.GetComputers();
+        string[] computers = [];
+        if (File.Exists("./computers"))
+        {
+            computers = File.ReadAllLines("./computers")
+            .SelectMany(c => c == "@currentdomain" ? AD.GetComputers() : [c])
+            .ToArray();
+        }
+        return [.. computers];
     }
 
-    private static List<string> GetClasses()
+    private static string[] GetClasses()
     {
-        var fclasses = new StreamReader("./classes");
-        List<string> classes = [];
-        while (!fclasses.EndOfStream)
-            classes.Add(fclasses.ReadLine()!);
-
-        fclasses.Close();
-        return classes;
+        return [.. File.ReadAllLines("./classes")];
     }
 
-    private void ProcessManagementObject(ManagementObject o, string classname, ComputerInfo computerInfo)
+    private static void ProcessManagementObject(ManagementObject o, string classname, ComputerInfo computerInfo)
     {
         if (!OperatingSystem.IsWindows()) return;
         switch (classname)
