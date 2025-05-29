@@ -65,5 +65,26 @@ partial class Application
         // response.Close(); // Closed by caller, not our business
     }
 
+    public void ProcessRequestV2(HttpListenerContext context)
+    {
+        var path = context.Request.RawUrl ?? "";
+        if (!path.Contains("/v2")) return;
+        path = path.Replace("/v2", "").Trim('/');
+        string json;
+        if (path.Equals("computers", StringComparison.CurrentCultureIgnoreCase))
+        {
+            var list = AD.GetComputers();
+            json = Serialize(list);
+        }
+        else
+        {
+            var data = Repository.Load($"{path}.json");
+            if (data is null) { context.Response.Close(); return; }
+            json = Serialize(data);
+        }
+        context.Response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(json));
+        context.Response.Close();
+    }
+
     private static string Serialize(object data) => JsonSerializer.Serialize(data);
 }

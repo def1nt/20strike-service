@@ -51,13 +51,15 @@ partial class Application
             catch (HttpListenerException) { continue; }
             catch (Exception e) { Console.WriteLine(e.Message); throw; }
 
-            var request = context.Request;
-            var Response = context.Response;
+            HttpListenerRequest request = context.Request;
+            HttpListenerResponse Response = context.Response;
 
+            if (request.RawUrl?.Contains("favicon.ico") ?? false) { Response.Close(); continue; }
             Response.AppendHeader("Access-Control-Allow-Origin", "*");
             Response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
             Response.AddHeader("Access-Control-Allow-Methods", "GET, POST");
 
+            if (request.RawUrl?.Contains("/v2/") ?? false) { ProcessRequestV2(context); continue; }
             Dictionary<string, string> req;
             try
             {
