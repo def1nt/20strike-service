@@ -2,7 +2,7 @@ namespace _20strike;
 
 class TaskHandler
 {
-    readonly List<Task> Tasks = null!;
+    readonly List<Task> Tasks;
 
     public bool Empty { get; set; }
 

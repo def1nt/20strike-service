@@ -70,17 +70,75 @@ partial class Application
         var path = context.Request.RawUrl ?? "";
         if (!path.Contains("/v2")) return;
         path = path.Replace("/v2", "").Trim('/');
+
         string json;
-        if (path.Equals("computers", StringComparison.CurrentCultureIgnoreCase))
+        try
         {
-            var list = AD.GetComputers();
-            json = Serialize(list);
+            if (path.Equals("computers", StringComparison.CurrentCultureIgnoreCase))   // /computers
+            {
+                switch (context.Request.HttpMethod)
+                {
+                    case "GET":
+                        json = Serialize(GetComputers());
+                        break;
+                    default:
+                        context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                        json = "Method not allowed";
+                        break;
+                }
+            }
+            else if (path.StartsWith("location/"))   // /location/computer
+            {
+                switch (context.Request.HttpMethod)
+                {
+                    case "GET":
+                        var computer = path.Replace("location/", "");
+                        var info = Repository.Load($"{computer}.json");
+                        var location = info?.Location;
+                        if (location is null)
+                        {
+                            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            json = "Computer not found";
+                        }
+                        else
+                        {
+                            json = Serialize(location);
+                        }
+                        break;
+                    case "POST":
+                    case "PUT":
+                        computer = path.Replace("location/", "");
+                        location = JsonSerializer.Deserialize<MapData>(context.Request.InputStream);
+                        info = Repository.Load($"{computer}.json");
+                        if (info is null)
+                        {
+                            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            json = "Computer not found";
+                        }
+                        else
+                        {
+                            info.Location = location;
+                            new Repository(info).Save();
+                            json = "Location saved";
+                        }
+                        break;
+                    default:
+                        context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                        json = "Method not allowed";
+                        break;
+                }
+            }
+            else   // /computer
+            {
+                var data = Repository.Load($"{path}.json");
+                if (data is null) { context.Response.Close(); return; }
+                json = Serialize(data);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            var data = Repository.Load($"{path}.json");
-            if (data is null) { context.Response.Close(); return; }
-            json = Serialize(data);
+            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            json = ex.Message;
         }
         context.Response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(json));
         context.Response.Close();

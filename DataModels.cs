@@ -29,6 +29,8 @@ public sealed class ComputerInfo(string name)
     public SoftwareInfo[]? Software { get; set; }
     // Processes - name, memory usage, cpu usage
     public ProcessInfo[]? Process { get; set; }
+    // Map data
+    public MapData? Location { get; set; }
 }
 
 public sealed class BIOSInfo(string name, string vendor, string version, string releaseDate)
@@ -143,4 +145,12 @@ public sealed class ProcessInfo(string name, string processId, string workingSet
     public string WorkingSetSize { get; set; } = workingSetSize;
     public string CreationDate { get; set; } = creationDate;
     public ProcessInfo() : this("", "", "", "") { }
+}
+
+public sealed class MapData(string x, string y, string description)
+{
+    public string X { get; set; } = x;
+    public string Y { get; set; } = y;
+    public string Description { get; set; } = description;
+    public MapData() : this("", "", "") { }
 }

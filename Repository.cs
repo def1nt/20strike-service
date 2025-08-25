@@ -22,7 +22,7 @@ public class Repository(ComputerInfo data)
         File.WriteAllText(Path.Join(path, filename), JsonSerializer.Serialize(newdata, options));
     }
 
-    private static ComputerInfo? Load(string filename)
+    public static ComputerInfo? Load(string filename)
     {
         if (!File.Exists(Path.Join(path, filename))) return null;
         return JsonSerializer.Deserialize<ComputerInfo>(File.ReadAllText(Path.Join(path, filename)), options)!;
@@ -31,7 +31,11 @@ public class Repository(ComputerInfo data)
     private ComputerInfo Merge(ComputerInfo old)
     {
         if (data.BIOS != null) old.BIOS = data.BIOS;
-        if (data.ComputerSystem != null) old.ComputerSystem = data.ComputerSystem;
+        if (data.ComputerSystem != null)
+        {
+            if (string.IsNullOrEmpty(data.ComputerSystem.UserName)) data.ComputerSystem.UserName = old.ComputerSystem?.UserName ?? "";
+            old.ComputerSystem = data.ComputerSystem;
+        }
         if (data.OperatingSystem != null) old.OperatingSystem = data.OperatingSystem;
         if (data.Processor != null) old.Processor = data.Processor;
         if (data.PhysicalMemory != null) old.PhysicalMemory = data.PhysicalMemory;
@@ -43,6 +47,7 @@ public class Repository(ComputerInfo data)
         if (data.Printer != null) old.Printer = data.Printer;
         if (data.Software != null) old.Software = data.Software;
         if (data.Process != null) old.Process = data.Process;
+        if (data.Location != null) old.Location = data.Location;
         return old;
     }
 }
