@@ -74,12 +74,35 @@ partial class Application
         string json;
         try
         {
-            if (path.Equals("computers", StringComparison.CurrentCultureIgnoreCase))   // /computers
+            if (path.StartsWith("computers", StringComparison.CurrentCultureIgnoreCase))   // /computers
             {
                 switch (context.Request.HttpMethod)
                 {
+                    case "OPTIONS":
+                        context.Response.StatusCode = (int)HttpStatusCode.OK;
+                        json = "OK";
+                        break;
                     case "GET":
-                        json = Serialize(GetComputers());
+                        // If we have computer name
+                        if (path.Contains('/') && path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length == 2)
+                        {
+                            var computer = path.Replace("computers/", "");
+                            var data = Repository.Load($"{computer}.json");
+                            if (data is not null)
+                            {
+                                json = Serialize(data);
+                            }
+                            else
+                            {
+                                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                json = "Computer not found";
+                            }
+                        }
+                        // If we don't
+                        else
+                        {
+                            json = Serialize(GetComputers().Select(name => { var data = Repository.Load($"{name}.json"); return new ComputerData(name, data?.Location); }));
+                        }
                         break;
                     default:
                         context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
@@ -87,10 +110,14 @@ partial class Application
                         break;
                 }
             }
-            else if (path.StartsWith("location/"))   // /location/computer
+            else if (path.StartsWith("location/", StringComparison.CurrentCultureIgnoreCase))   // /location/computer
             {
                 switch (context.Request.HttpMethod)
                 {
+                    case "OPTIONS":
+                        context.Response.StatusCode = (int)HttpStatusCode.OK;
+                        json = "OK";
+                        break;
                     case "GET":
                         var computer = path.Replace("location/", "");
                         var info = Repository.Load($"{computer}.json");
@@ -128,11 +155,10 @@ partial class Application
                         break;
                 }
             }
-            else   // /computer
+            else   // unknown path
             {
-                var data = Repository.Load($"{path}.json");
-                if (data is null) { context.Response.Close(); return; }
-                json = Serialize(data);
+                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                json = "Path not found";
             }
         }
         catch (Exception ex)
@@ -145,4 +171,6 @@ partial class Application
     }
 
     private static string Serialize(object data) => JsonSerializer.Serialize(data);
+
+    public record ComputerData(string Name, MapData? Location);
 }
