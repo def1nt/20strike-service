@@ -9,7 +9,7 @@ partial class Application
 
     private int DBInsert(string?[] fields)
     {
-        SqliteCommand comm = new(@"INSERT INTO data VALUES ($pc, $class, $param, $type, $value)");
+        using SqliteCommand comm = new(@"INSERT INTO data VALUES ($pc, $class, $param, $type, $value)");
         comm.Parameters.AddWithValue("$pc", fields[0]);
         comm.Parameters.AddWithValue("$class", fields[1]);
         comm.Parameters.AddWithValue("$param", fields[2]);
@@ -21,7 +21,7 @@ partial class Application
 
     private void DBCleanup(string Pc, string Class)
     {
-        SqliteCommand comm = new(@"DELETE FROM data WHERE pc=$pc AND class=$class", conn);
+        using SqliteCommand comm = new(@"DELETE FROM data WHERE pc=$pc AND class=$class", conn);
         comm.Parameters.AddWithValue("$pc", Pc);
         comm.Parameters.AddWithValue("$class", Class);
         comm.ExecuteNonQuery();
@@ -30,62 +30,76 @@ partial class Application
     private object[] DBRead(string computername, string classname)
     {
         if (classname == "brief") { return DBReadBrief(computername); }
-        SqliteCommand comm = new(@"SELECT t.class, t.param, t.value FROM data t WHERE pc LIKE $pc AND class LIKE $class", conn);
+        using SqliteCommand comm = new(@"SELECT t.class, t.param, t.value FROM data t WHERE pc LIKE $pc AND class LIKE $class", conn);
         if (computername == "*") { computername = "%"; }
         if (classname == "*") { classname = "%"; }
         comm.Parameters.AddWithValue("$pc", computername);
         comm.Parameters.AddWithValue("$class", classname);
-        SqliteDataReader reader = comm.ExecuteReader();
-        int c = reader.FieldCount;
-        if (!reader.HasRows) return [];
-
-        List<Dictionary<string, string>> d = [];
-
-        rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
-
-        while (reader.Read())
+        using SqliteDataReader reader = comm.ExecuteReader();
+        try
         {
-            Dictionary<string, string> dt = [];
+            int c = reader.FieldCount;
+            if (!reader.HasRows) return [];
 
-            for (int i = 0; i < c; i++)
+            List<Dictionary<string, string>> d = [];
+
+            rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
+
+            while (reader.Read())
             {
-                dt.Add(rows[i][0].ToString()!, reader.GetString(i));
+                Dictionary<string, string> dt = [];
+
+                for (int i = 0; i < c; i++)
+                {
+                    dt.Add(rows[i][0].ToString()!, reader.GetString(i));
+                }
+                d.Add(dt);
             }
-            d.Add(dt);
+            return d.ToArray<Dictionary<string, string>>();
         }
-        reader.Close();
-        return d.ToArray<Dictionary<string, string>>();
+        finally
+        {
+            reader.Close();
+            comm.Dispose();
+        }
     }
 
     private object[] DBReadBrief(string computername)
     {
-        SqliteCommand comm = new();
+        using SqliteCommand comm = new();
         if (computername == "*") { computername = "%"; }
         comm.CommandText = @$"SELECT t.class, t.param, t.value FROM data t
 JOIN schema_tab sc ON sc.class=t.class AND sc.param=t.param
 WHERE pc LIKE $pc";
         comm.Parameters.AddWithValue("$pc", computername);
         comm.Connection = conn;
-        SqliteDataReader reader = comm.ExecuteReader();
-        int c = reader.FieldCount;
-        if (!reader.HasRows) return [];
-
-        List<Dictionary<string, string>> d = [];
-
-        rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
-
-        while (reader.Read())
+        using SqliteDataReader reader = comm.ExecuteReader();
+        try
         {
-            Dictionary<string, string> dt = [];
+            int c = reader.FieldCount;
+            if (!reader.HasRows) return [];
 
-            for (int i = 0; i < c; i++)
+            List<Dictionary<string, string>> d = [];
+
+            rows ??= reader.GetSchemaTable().Rows; // Very slow so cached in global static
+
+            while (reader.Read())
             {
-                dt.Add(rows[i][0].ToString()!, reader.GetString(i));
+                Dictionary<string, string> dt = [];
+
+                for (int i = 0; i < c; i++)
+                {
+                    dt.Add(rows[i][0].ToString()!, reader.GetString(i));
+                }
+                d.Add(dt);
             }
-            d.Add(dt);
+            return d.ToArray<Dictionary<string, string>>();
         }
-        reader.Close();
-        return d.ToArray<Dictionary<string, string>>();
+        finally
+        {
+            reader.Close();
+            comm.Dispose();
+        }
     }
 
     private void PruneData()

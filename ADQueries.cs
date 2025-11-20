@@ -68,7 +68,8 @@ static class AD
             mySearcher.PageSize = 250;
             mySearcher.PropertiesToLoad.Add("name");
 
-            foreach (SearchResult resEnt in mySearcher.FindAll())
+            using SearchResultCollection myResults = mySearcher.FindAll();
+            foreach (SearchResult resEnt in myResults)
             {
                 if (resEnt.Properties["name"].Count > 0)
                 {

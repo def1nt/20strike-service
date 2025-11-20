@@ -7,36 +7,31 @@ partial class Application
     private static string InvokeMethod(string Computer, string Class, string Method, string Object = "")
     {
         if (!OperatingSystem.IsWindows()) return "Wrong OS";
-        var mp = new ManagementPath($@"\\{Computer}\root\cimv2:{Class}");
-        var mc = new ManagementClass(mp);
-        ManagementObjectCollection mo;
         try
         {
-            mo = mc.GetInstances();
+            var mp = new ManagementPath($@"\\{Computer}\root\cimv2:{Class}");
+            using var mc = new ManagementClass(mp);
+            using ManagementObjectCollection mo = mc.GetInstances();
+
+            foreach (ManagementObject o in mo)
+            {
+                if (ContainsPropWithValue(o.Properties,
+                        Class switch
+                        {
+                            "Win32_Service" => "Name",
+                            _ => ""
+                        },
+                        Object))
+                {
+                    _ = o.InvokeMethod(Method, []);
+                    return o.ToString();
+                }
+            }
         }
         catch (Exception e)
         {
             Console.WriteLine("ERROR: " + e.Message);
             return e.Message;
-        }
-
-        foreach (ManagementObject o in mo)
-        {
-            if (ContainsPropWithValue(o.Properties,
-                    Class switch
-                    {
-                        "Win32_Service" => "Name",
-                        _ => ""
-                    },
-                    Object))
-            {
-                try { _ = o.InvokeMethod(Method, []); return o.ToString(); }
-                catch (Exception e)
-                {
-                    Console.WriteLine("ERROR: " + e.Message);
-                    return e.Message;
-                }
-            }
         }
         return "Empty result";
     }

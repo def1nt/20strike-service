@@ -32,8 +32,7 @@ partial class Application
                 if (!request.ContainsKey("pc") || string.IsNullOrEmpty(computername = request["pc"])) computername = "*"; // Trying to one-line two checks and assignment
                 if (!request.ContainsKey("class") || string.IsNullOrEmpty(classname = request["class"])) classname = "*";
                 var data = DBRead(computername, classname);
-                var bytes = System.Text.Encoding.UTF8.GetBytes(Serialize(data));
-                response.OutputStream.Write(bytes);
+                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(data)));
             }
         }
 
