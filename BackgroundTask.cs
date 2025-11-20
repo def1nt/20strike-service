@@ -3,7 +3,7 @@ namespace _20strike;
 sealed class TaskHandler
 {
     readonly List<Task> _tasks;
-    readonly object _lock = new object();
+    readonly Lock _lock = new();
 
     public bool Empty => _tasks.Count == 0;
 
