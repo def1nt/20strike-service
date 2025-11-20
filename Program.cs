@@ -26,12 +26,13 @@ partial class Application
     {
         Console.WriteLine("Stopping properly...");
         listener.Stop();
+        autoUpdateTimer?.Dispose();
     }
 
     public async Task Start()
     {
         ParseArgs();
-        _ = AutoUpdate();
+        AutoUpdate();
 
         using (var fi = new StreamReader("./prefixes"))
         {
@@ -104,14 +105,37 @@ partial class Application
         Console.WriteLine("Stopped.");
     }
 
-    public async Task AutoUpdate()
+    private System.Threading.Timer? autoUpdateTimer;
+    private bool isAutoUpdateRunning = false;
+
+    public void AutoUpdate()
     {
-        PruneData();
-        if (DateTime.Today.DayOfWeek != DayOfWeek.Sunday && DateTime.Today.DayOfWeek != DayOfWeek.Saturday)
-            await QueryAll();
-        Console.WriteLine(DateTime.Now.ToString());
-        await Task.Delay(new TimeSpan(3, 0, 0), cancellationToken);
-        if (cancellationToken.IsCancellationRequested) return;
-        _ = AutoUpdate();
+        autoUpdateTimer = new System.Threading.Timer(async _ => await AutoUpdateCallback(), null,
+            TimeSpan.Zero, // Start immediately
+            new TimeSpan(3, 0, 0)); // Repeat every 3 hours
+    }
+
+    private async Task AutoUpdateCallback()
+    {
+        if (isAutoUpdateRunning) return;
+
+        isAutoUpdateRunning = true;
+        try
+        {
+            PruneData();
+            if (DateTime.Today.DayOfWeek != DayOfWeek.Sunday && DateTime.Today.DayOfWeek != DayOfWeek.Saturday)
+                await QueryAll();
+            Console.WriteLine(DateTime.Now.ToString());
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                autoUpdateTimer?.Dispose();
+                return;
+            }
+        }
+        finally
+        {
+            isAutoUpdateRunning = false;
+        }
     }
 }
