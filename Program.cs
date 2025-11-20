@@ -100,7 +100,7 @@ partial class Application
 
         }
         listener.Close();
-        await taskhandler.WaitAll();
+        await taskhandler.WaitAllAsync();
         Console.WriteLine("Stopped.");
     }
 

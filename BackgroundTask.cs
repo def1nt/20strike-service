@@ -1,21 +1,24 @@
 namespace _20strike;
 
-class TaskHandler
+sealed class TaskHandler
 {
-    readonly List<Task> Tasks;
+    readonly List<Task> _tasks;
+    readonly object _lock = new object();
 
-    public bool Empty { get; set; }
+    public bool Empty => _tasks.Count == 0;
 
     public TaskHandler()
     {
-        Tasks = [];
-        Empty = true;
+        _tasks = [];
     }
 
     public void AddTask(Task task)
     {
-        Tasks.Add(task);
-        Empty = false;
+        lock (_lock)
+        {
+            RemoveCompleted();
+            _tasks.Add(task);
+        }
     }
 
     public void AddAction(Action action)
@@ -23,29 +26,31 @@ class TaskHandler
         AddTask(Task.Run(action));
     }
 
-    public void CheckCompletion()
+    public void RemoveCompleted()
     {
-        for (int i = 0; i < Tasks.Count; i++)
+        lock (_lock)
         {
-            if (Tasks[i].IsCompleted) { Tasks.RemoveAt(i); i -= 1; }
+            _tasks.RemoveAll(task => task.IsCompleted);
         }
-        if (Tasks.Count == 0) Empty = true;
-    }
-
-    public void Delete()
-    {
-
     }
 
     public bool AllReady()
     {
-        CheckCompletion();
+        RemoveCompleted();
         return Empty;
     }
 
-    public Task<bool> WaitAll()
+    public async Task WaitAllAsync()
     {
-        while (!AllReady()) Thread.Sleep(100);
-        return Task.FromResult(true);
+        Task[] tasksToWait;
+        lock (_lock)
+        {
+            tasksToWait = _tasks.ToArray();
+        }
+
+        if (tasksToWait.Length > 0)
+        {
+            await Task.WhenAll(tasksToWait);
+        }
     }
 }
