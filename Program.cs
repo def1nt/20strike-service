@@ -38,7 +38,7 @@ partial class Application
         {
             while (!fi.EndOfStream)
             {
-                listener.Prefixes.Add(fi.ReadLine()!);
+                listener.Prefixes.Add(await fi.ReadLineAsync() ?? "http://+:5310/");
             }
         }
 
@@ -53,12 +53,12 @@ partial class Application
             catch (Exception e) { Console.WriteLine(e.Message); throw; }
 
             HttpListenerRequest request = context.Request;
-            HttpListenerResponse Response = context.Response;
+            HttpListenerResponse response = context.Response;
 
-            if (request.RawUrl?.Contains("favicon.ico") ?? false) { Response.Close(); continue; }
-            Response.AppendHeader("Access-Control-Allow-Origin", "*");
-            Response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
-            Response.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+            if (request.RawUrl?.Contains("favicon.ico") ?? false) { response.Close(); continue; }
+            response.AppendHeader("Access-Control-Allow-Origin", "*");
+            response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
+            response.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
 
             if (request.RawUrl?.Contains("/v2/") ?? false) { ProcessRequestV2(context); continue; }
             Dictionary<string, string> req;
@@ -71,23 +71,24 @@ partial class Application
             catch (Exception e)
             {
                 Console.WriteLine("ERROR: " + e.Message);
-                Response.Close();
+                response.Close();
                 continue;
             }
-            Response.ContentType = "text/plain";
+            response.ContentType = "text/plain";
 
-            if (!req.ContainsKey("action")) { Response.Close(); continue; }
-            if (!req.ContainsKey("target")) { Response.Close(); continue; }
+            if (!req.ContainsKey("action")) { response.Close(); continue; }
+            if (!req.ContainsKey("target")) { response.Close(); continue; }
 
             if (req["action"] == "stop")
             {
-                Response.Close();
+                response.Close();
                 listener.Close();
+                return;
             }
 
             try
             {
-                ProcessRequest(req, Response);
+                ProcessRequest(req, response);
             }
             catch (Exception e)
             {
@@ -95,7 +96,7 @@ partial class Application
             }
             finally
             {
-                try { Response.Close(); }
+                try { response.Close(); }
                 catch (Exception e) { Console.WriteLine("ERROR: " + e.Message); }
             }
 
