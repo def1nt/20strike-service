@@ -67,7 +67,7 @@ partial class Application
         string WMIProvider = "cimv2";
         if (classname == "WmiMonitorID") WMIProvider = "wmi";
         var mp = new ManagementPath($@"\\{computername}\root\{WMIProvider}:{classname}");
-        var mc = new ManagementClass(mp);
+        using var mc = new ManagementClass(mp);
         ManagementObjectCollection mo;
         try
         {
@@ -82,23 +82,27 @@ partial class Application
         int c = 0;
         foreach (ManagementObject o in mo)
         {
-            if (c++ > 9 && classname == "Win32_NTLogEvent") break;
-            PropertyDataCollection props = o.Properties;
-            List<string[]> props_processed = [];  // Deal with these nulls!
-            foreach (var p in props)
+            using (o)
             {
-                if (p.Value == null) continue;
+                if (c++ > 9 && classname == "Win32_NTLogEvent") break;
+                PropertyDataCollection props = o.Properties;
+                List<string[]> props_processed = [];  // Deal with these nulls!
+                foreach (var p in props)
+                {
+                    if (p.Value == null) continue;
 
-                string t = p.Type.ToString();
+                    string t = p.Type.ToString();
 
-                string s = GetFromCIMObject(p.Type, p.Value);
-                if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") { c--; goto managementObjectsLoop; }
-                props_processed.Add([computername, classname, p.Name, t, s]);
-            }
-            ProcessManagementObject(o, classname, computerInfo);
-            foreach (var p in props_processed) DBInsert(p);
+                    string s = GetFromCIMObject(p.Type, p.Value);
+                    if (classname == "Win32_NTLogEvent" && p.Name == "EventType" && s != "1") { c--; goto managementObjectsLoop; }
+                    props_processed.Add([computername, classname, p.Name, t, s]);
+                }
+                ProcessManagementObject(o, classname, computerInfo);
+                foreach (var p in props_processed) DBInsert(p);
             managementObjectsLoop:;
+            }
         }
+        mo.Dispose();
     }
 
     private static string GetFromCIMObject(CimType type, object value)

@@ -7,10 +7,10 @@ static class AD
     public const string SamAccountNameProperty = "SamAccountName";
     public const string CanonicalNameProperty = "CN";
 
-    public struct ADUser
+    private struct ADUser
     {
         public string CN { get; set; }
-        public string SamAcountName { get; set; }
+        public string SamAccountName { get; set; }
     }
 
     public static Dictionary<string, string> GetUsers()
@@ -21,17 +21,14 @@ static class AD
         using (DirectoryEntry searchRoot = new(@$"LDAP://{domain.Name}"))
         using (DirectorySearcher directorySearcher = new(searchRoot))
         {
-            // Set the filter
             directorySearcher.Filter = "(&(objectCategory=person)(objectClass=user))";
 
-            // Set the properties to load.
             directorySearcher.PropertiesToLoad.Add(CanonicalNameProperty);
             directorySearcher.PropertiesToLoad.Add(SamAccountNameProperty);
 
             using SearchResultCollection searchResultCollection = directorySearcher.FindAll();
             foreach (SearchResult searchResult in searchResultCollection)
             {
-                // Create new ADUser instance
                 var user = new ADUser();
 
                 // Set CN if available.
@@ -40,17 +37,16 @@ static class AD
 
                 // Set sAMAccountName if available
                 if (searchResult.Properties[SamAccountNameProperty].Count > 0)
-                    user.SamAcountName = searchResult.Properties[SamAccountNameProperty][0].ToString()?.ToLower() ?? "Unknown";
+                    user.SamAccountName = searchResult.Properties[SamAccountNameProperty][0].ToString()?.ToLower() ?? "Unknown";
 
-                // Add user to users list.
                 users.Add(user);
             }
         }
 
         return new(
-            users.Where(u => !string.IsNullOrEmpty(u.SamAcountName))
-            .DistinctBy(u => u.SamAcountName).OrderBy(u => u.SamAcountName)
-            .Select(u => new KeyValuePair<string, string>(u.SamAcountName, u.CN)));
+            users.Where(u => !string.IsNullOrEmpty(u.SamAccountName))
+            .OrderBy(u => u.SamAccountName)
+            .Select(u => new KeyValuePair<string, string>(u.SamAccountName, u.CN)));
     }
 
     public static List<string> GetComputers()
