@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 
 namespace _20strike;
@@ -15,15 +16,15 @@ partial class Application
 
             if (target == "computers")
             {
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(GetComputers())));
+                response.OutputStream.Write(Encoding.UTF8.GetBytes(Serialize(GetComputers())));
             }
             if (target == "classes")
             {
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(GetClasses())));
+                response.OutputStream.Write(Encoding.UTF8.GetBytes(Serialize(GetClasses())));
             }
             if (target == "users")
             {
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(AD.GetUsers())));
+                response.OutputStream.Write(Encoding.UTF8.GetBytes(Serialize(AD.GetUsers())));
             }
             if (target == "info")
             {
@@ -32,7 +33,7 @@ partial class Application
                 if (!request.ContainsKey("pc") || string.IsNullOrEmpty(computername = request["pc"])) computername = "*"; // Trying to one-line two checks and assignment
                 if (!request.ContainsKey("class") || string.IsNullOrEmpty(classname = request["class"])) classname = "*";
                 var data = DBRead(computername, classname);
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(Serialize(data)));
+                response.OutputStream.Write(Encoding.UTF8.GetBytes(Serialize(data)));
             }
         }
 
@@ -41,13 +42,13 @@ partial class Application
             var target = request["target"];
             if (!taskhandler.AllReady())
             {
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes($"Already updating {pollerProgress}%"));
+                response.OutputStream.Write(Encoding.UTF8.GetBytes($"Already updating {pollerProgress}%"));
             }
             else
             {
                 if (!string.IsNullOrEmpty(target))
                     taskhandler.AddAction(() => QueryComputer(target));
-                response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes("Started update"));
+                response.OutputStream.Write(Encoding.UTF8.GetBytes("Started update"));
             }
         }
 
@@ -58,115 +59,180 @@ partial class Application
             var objectname = request["object"];
             var methodname = request["method"];
             string result = InvokeMethod(computername, classname, methodname, objectname);
-            response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(result));
+            response.OutputStream.Write(Encoding.UTF8.GetBytes(result));
         }
 
         // response.Close(); // Closed by caller, not our business
     }
 
-    public void ProcessRequestV2(HttpListenerContext context)
+    public static void ProcessRequestV2(HttpListenerContext context)
     {
-        var path = context.Request.RawUrl ?? "";
-        if (!path.Contains("/v2")) return;
-        path = path.Replace("/v2", "").Trim('/');
+        var request = context.Request;
+        var response = context.Response;
 
-        string json;
         try
         {
-            if (path.StartsWith("computers", StringComparison.CurrentCultureIgnoreCase))   // /computers
+            // Use AbsolutePath to strip query strings - no ?parameters
+            var path = request.Url?.AbsolutePath ?? "";
+            if (!path.StartsWith("/v2", StringComparison.OrdinalIgnoreCase))
             {
-                switch (context.Request.HttpMethod)
-                {
-                    case "OPTIONS":
-                        context.Response.StatusCode = (int)HttpStatusCode.OK;
-                        json = "OK";
-                        break;
-                    case "GET":
-                        // If we have computer name
-                        if (path.Contains('/') && path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length == 2)
-                        {
-                            var computer = path.Replace("computers/", "");
-                            var data = Repository.Load($"{computer}.json");
-                            if (data is not null)
-                            {
-                                json = Serialize(data);
-                            }
-                            else
-                            {
-                                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                json = "Computer not found";
-                            }
-                        }
-                        // If we don't
-                        else
-                        {
-                            json = Serialize(GetComputers().Select(name => { var data = Repository.Load($"{name}.json"); return new ComputerData(name, data?.Location); }));
-                        }
-                        break;
-                    default:
-                        context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
-                        json = "Method not allowed";
-                        break;
-                }
+                response.StatusCode = (int)HttpStatusCode.NotFound;
+                WriteRaw(response, "Path not found");
+                return;
             }
-            else if (path.StartsWith("location/", StringComparison.CurrentCultureIgnoreCase))   // /location/computer
+
+            var segments = path.AsSpan("/v2".Length)
+                .Trim('/')
+                .ToString()
+                .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (segments.Length == 0)
             {
-                switch (context.Request.HttpMethod)
-                {
-                    case "OPTIONS":
-                        context.Response.StatusCode = (int)HttpStatusCode.OK;
-                        json = "OK";
-                        break;
-                    case "GET":
-                        var computer = path.Replace("location/", "");
-                        var info = Repository.Load($"{computer}.json");
-                        var location = info?.Location;
-                        if (location is null)
-                        {
-                            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            json = "Computer not found";
-                        }
-                        else
-                        {
-                            json = Serialize(location);
-                        }
-                        break;
-                    case "POST":
-                    case "PUT":
-                        computer = path.Replace("location/", "");
-                        location = JsonSerializer.Deserialize<MapData>(context.Request.InputStream);
-                        info = Repository.Load($"{computer}.json");
-                        if (info is null)
-                        {
-                            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            json = "Computer not found";
-                        }
-                        else
-                        {
-                            info.Location = location;
-                            new Repository(info).Save();
-                            json = "Location saved";
-                        }
-                        break;
-                    default:
-                        context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
-                        json = "Method not allowed";
-                        break;
-                }
+                response.StatusCode = (int)HttpStatusCode.NotFound;
+                WriteRaw(response, "Path not found");
+                return;
             }
-            else   // unknown path
+
+            var method = request.HttpMethod;
+            var resource = segments[0].ToLowerInvariant();
+
+            switch (resource)
             {
-                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                json = "Path not found";
+                case "computers":
+                    HandleComputers(context, segments, method);
+                    break;
+                case "location":
+                    HandleLocation(context, segments, method);
+                    break;
+                default:
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                    WriteRaw(response, "Path not found");
+                    break;
             }
         }
         catch (Exception ex)
         {
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            json = ex.Message;
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            WriteRaw(response, ex.Message);
         }
-        context.Response.OutputStream.Write(System.Text.Encoding.UTF8.GetBytes(json));
-        context.Response.Close();
+        finally
+        {
+            response.Close();
+        }
+    }
+
+    // /v2/computers[/{name}]
+    private static void HandleComputers(HttpListenerContext context, string[] segments, string method)
+    {
+        var response = context.Response;
+
+        switch (method)
+        {
+            case "OPTIONS":
+                response.StatusCode = (int)HttpStatusCode.OK;
+                WriteRaw(response, "OK");
+                break;
+
+            case "GET":
+                if (segments.Length == 2)
+                {
+                    // GET /v2/computers/{computerName}
+                    var computerName = segments[1];
+                    var data = Repository.Load($"{computerName}.json");
+                    if (data is not null)
+                    {
+                        WriteJson(response, data);
+                    }
+                    else
+                    {
+                        response.StatusCode = (int)HttpStatusCode.NotFound;
+                        WriteRaw(response, "Computer not found");
+                    }
+                }
+                else
+                {
+                    // GET /v2/computers
+                    var computers = GetComputers()
+                        .Select(name => new ComputerData(name, Repository.Load($"{name}.json")?.Location));
+                    WriteJson(response, computers);
+                }
+                break;
+
+            default:
+                response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                WriteRaw(response, "Method not allowed");
+                break;
+        }
+    }
+
+    // /v2/location/{name}
+    private static void HandleLocation(HttpListenerContext context, string[] segments, string method)
+    {
+        var response = context.Response;
+
+        if (segments.Length < 2)
+        {
+            response.StatusCode = (int)HttpStatusCode.NotFound;
+            WriteRaw(response, "Computer name required");
+            return;
+        }
+
+        var computerName = segments[1];
+
+        switch (method)
+        {
+            case "OPTIONS":
+                response.StatusCode = (int)HttpStatusCode.OK;
+                WriteRaw(response, "OK");
+                break;
+
+            case "GET":
+                var info = Repository.Load($"{computerName}.json");
+                var location = info?.Location;
+                if (location is null)
+                {
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                    WriteRaw(response, "Computer not found");
+                }
+                else
+                {
+                    WriteJson(response, location);
+                }
+                break;
+
+            case "POST":
+            case "PUT":
+                var mapData = JsonSerializer.Deserialize<MapData>(context.Request.InputStream);
+                info = Repository.Load($"{computerName}.json");
+                if (info is null)
+                {
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                    WriteRaw(response, "Computer not found");
+                }
+                else
+                {
+                    info.Location = mapData;
+                    new Repository(info).Save();
+                    WriteRaw(response, "Location saved");
+                }
+                break;
+
+            default:
+                response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                WriteRaw(response, "Method not allowed");
+                break;
+        }
+    }
+
+    private static void WriteRaw(HttpListenerResponse response, string text)
+    {
+        var buffer = Encoding.UTF8.GetBytes(text);
+        response.OutputStream.Write(buffer, 0, buffer.Length);
+    }
+
+    private static void WriteJson(HttpListenerResponse response, object data)
+    {
+        WriteRaw(response, JsonSerializer.Serialize(data));
     }
 
     private static string Serialize(object data) => JsonSerializer.Serialize(data);
