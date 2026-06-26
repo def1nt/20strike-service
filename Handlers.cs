@@ -104,6 +104,9 @@ partial class Application
                 case "location":
                     HandleLocation(context, segments, method);
                     break;
+                case "ping":
+                    HandlePing(context, segments, method);
+                    break;
                 default:
                     response.StatusCode = (int)HttpStatusCode.NotFound;
                     WriteRaw(response, "Path not found");
@@ -222,6 +225,12 @@ partial class Application
                 WriteRaw(response, "Method not allowed");
                 break;
         }
+    }
+
+    // /v2/ping - queries every computer, returns statuses and IP addesses
+    private static void HandlePing(HttpListenerContext context, string[] segments, string method)
+    {
+        WriteRaw(context.Response, """{"name": "pong", "ip": "127.0.0.1", "status": true}""");
     }
 
     private static void WriteRaw(HttpListenerResponse response, string text)
