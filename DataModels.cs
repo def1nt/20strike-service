@@ -147,10 +147,11 @@ public sealed class ProcessInfo(string name, string processId, string workingSet
     public ProcessInfo() : this("", "", "", "") { }
 }
 
-public sealed class MapData(double x, double y, string description)
+public sealed class MapData(double x, double y, string description, string phone)
 {
     public double X { get; set; } = x;
     public double Y { get; set; } = y;
     public string Description { get; set; } = description;
-    public MapData() : this(0.0, 0.0, "") { }
+    public string Phone { get; set; } = phone;
+    public MapData() : this(0.0, 0.0, "", "") { }
 }
