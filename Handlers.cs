@@ -227,10 +227,49 @@ partial class Application
         }
     }
 
+    private static readonly Lock pingLock = new();
     // /v2/ping - queries every computer, returns statuses and IP addesses
     private static void HandlePing(HttpListenerContext context, string[] segments, string method)
     {
-        WriteRaw(context.Response, """{"name": "pong", "ip": "127.0.0.1", "status": true}""");
+        if (pingLock.TryEnter())
+        {
+            Console.WriteLine("Ping");
+            try
+            {
+                var computers = Directory.GetFiles("data").Select(Path.GetFileNameWithoutExtension).Where(s => s is not null).Select(s => s!).ToArray();
+                var tasks = new Task<(string name, string ip, bool status)>[computers.Length];
+                int i = 0;
+                foreach (string computer in computers)
+                {
+                    var task = Ping(computer);
+                    tasks[i++] = task;
+                }
+                Task.WhenAll(tasks).GetAwaiter().GetResult();
+                WriteJson(context.Response,
+                    tasks.Select(t => new { name = t.Result.name, ip = t.Result.ip, status = t.Result.status }).ToArray()
+                );
+            }
+            finally
+            {
+                pingLock.Exit();
+            }
+        }
+        else
+        {
+            WriteRaw(context.Response, "Server is busy");
+            context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+        }
+    }
+
+    private static async Task<(string name, string ip, bool status)> Ping(string computerName)
+    {
+        using System.Net.NetworkInformation.Ping ping = new();
+        try
+        {
+            var response = await ping.SendPingAsync(computerName, 5000);
+            return (computerName, response.Address.ToString(), response.Status == System.Net.NetworkInformation.IPStatus.Success);
+        }
+        catch (Exception) { return (computerName, "", false); }
     }
 
     private static void WriteRaw(HttpListenerResponse response, string text)
