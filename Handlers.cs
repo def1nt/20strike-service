@@ -65,7 +65,7 @@ partial class Application
         // response.Close(); // Closed by caller, not our business
     }
 
-    public static void ProcessRequestV2(HttpListenerContext context)
+    public static async Task ProcessRequestV2(HttpListenerContext context)
     {
         var request = context.Request;
         var response = context.Response;
@@ -105,7 +105,7 @@ partial class Application
                     HandleLocation(context, segments, method);
                     break;
                 case "ping":
-                    HandlePing(context, segments, method);
+                    await HandlePing(context, segments, method);
                     break;
                 default:
                     response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -227,13 +227,12 @@ partial class Application
         }
     }
 
-    private static readonly Lock pingLock = new();
+    private static readonly SemaphoreSlim pingLock = new(1, 1);
     // /v2/ping - queries every computer, returns statuses and IP addesses
-    private static void HandlePing(HttpListenerContext context, string[] segments, string method)
+    private static async Task HandlePing(HttpListenerContext context, string[] segments, string method)
     {
-        if (pingLock.TryEnter())
+        if (await pingLock.WaitAsync(0))
         {
-            Console.WriteLine("Ping");
             try
             {
                 var computers = Directory.GetFiles("data").Select(Path.GetFileNameWithoutExtension).Where(s => s is not null).Select(s => s!).ToArray();
@@ -244,14 +243,14 @@ partial class Application
                     var task = Ping(computer);
                     tasks[i++] = task;
                 }
-                Task.WhenAll(tasks).GetAwaiter().GetResult();
+                await Task.WhenAll(tasks);
                 WriteJson(context.Response,
                     tasks.Select(t => new { name = t.Result.name, ip = t.Result.ip, status = t.Result.status }).ToArray()
                 );
             }
             finally
             {
-                pingLock.Exit();
+                pingLock.Release();
             }
         }
         else
@@ -266,7 +265,7 @@ partial class Application
         using System.Net.NetworkInformation.Ping ping = new();
         try
         {
-            var response = await ping.SendPingAsync(computerName, 5000);
+            var response = await ping.SendPingAsync(computerName, 3000);
             return (computerName, response.Address.ToString(), response.Status == System.Net.NetworkInformation.IPStatus.Success);
         }
         catch (Exception) { return (computerName, "", false); }

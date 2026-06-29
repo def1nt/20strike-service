@@ -60,7 +60,7 @@ partial class Application
             response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
             response.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
 
-            if (request.RawUrl?.Contains("/v2/") ?? false) { ProcessRequestV2(context); continue; }
+            if (request.RawUrl?.Contains("/v2/") ?? false) { _ = Task.Run(() => ProcessRequestV2(context)); continue; }
             Dictionary<string, string> req;
             try
             {
