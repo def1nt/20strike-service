@@ -167,12 +167,13 @@ partial class Application
                     Name = o["Name"]?.ToString() ?? "",
                     Domain = o["Domain"]?.ToString() ?? "",
                     UserName = o["UserName"]?.ToString() ?? "",
+                    Manufacturer = o["Manufacturer"]?.ToString() ?? "",
                 };
                 break;
             case "Win32_OperatingSystem":
                 computerInfo.OperatingSystem ??= new()
                 {
-                    Name = o["Name"]?.ToString() ?? "",
+                    Name = o["Caption"]?.ToString() ?? "",
                     Version = o["Version"]?.ToString() ?? "",
                     BuildNumber = o["BuildNumber"]?.ToString() ?? "",
                     Architecture = o["OSArchitecture"]?.ToString() ?? "",
@@ -211,7 +212,8 @@ partial class Application
                     Model = o["Model"]?.ToString() ?? "",
                     SerialNumber = o["SerialNumber"]?.ToString() ?? "",
                     Size = o["Size"]?.ToString() ?? "",
-                    InterfaceType = o["InterfaceType"]?.ToString() ?? ""
+                    InterfaceType = o["InterfaceType"]?.ToString() ?? "",
+                    Status = o["Status"]?.ToString() ?? "",
                 };
                 computerInfo.PhysicalDisk = [.. computerInfo.PhysicalDisk, pdi];
                 break;
@@ -223,7 +225,8 @@ partial class Application
                     Size = o["Size"]?.ToString() ?? "",
                     FreeSpace = o["FreeSpace"]?.ToString() ?? "",
                     FileSystem = o["FileSystem"]?.ToString() ?? "Unknown",
-                    DriveType = o["DriveType"]?.ToString() ?? ""
+                    DriveType = o["DriveType"]?.ToString() ?? "",
+                    Description = o["Description"]?.ToString() ?? "",
                 };
                 computerInfo.LogicalDisk = [.. computerInfo.LogicalDisk, ldi];
                 break;
@@ -232,7 +235,9 @@ partial class Application
                 VideoControllerInfo vci = new()
                 {
                     Name = o["Name"]?.ToString() ?? "",
-                    DriverVersion = o["DriverVersion"]?.ToString() ?? ""
+                    DriverVersion = o["DriverVersion"]?.ToString() ?? "",
+                    Memory = o["AdapterRAM"]?.ToString() ?? "",
+                    VideoMode = o["VideoModeDescription"]?.ToString() ?? "",
                 };
                 computerInfo.VideoController = [.. computerInfo.VideoController, vci];
                 break;
@@ -240,7 +245,8 @@ partial class Application
                 computerInfo.Monitor ??= [];
                 MonitorInfo mi = new()
                 {
-                    Name = o["InstanceName"]?.ToString() ?? ""
+                    Name = WMIASCIIArrayToString(o["UserFriendlyName"]?.ToString() ?? ""),
+                    InstanceName = o["InstanceName"]?.ToString() ?? "",
                 };
                 computerInfo.Monitor = [.. computerInfo.Monitor, mi];
                 break;
@@ -249,7 +255,8 @@ partial class Application
                 NetworkAdapterInfo nai = new()
                 {
                     Name = o["Name"]?.ToString() ?? "",
-                    MacAddress = o["MACAddress"]?.ToString() ?? ""
+                    MacAddress = o["MACAddress"]?.ToString() ?? "",
+                    Speed = o["Speed"]?.ToString() ?? "",
                 };
                 computerInfo.NetworkAdapter = [.. computerInfo.NetworkAdapter, nai];
                 break;
@@ -277,5 +284,31 @@ partial class Application
             default:
                 break;
         }
+    }
+
+    // takes "[65, 99, 101, 114, 32, 86, 50, 50, 51, 87, 0, 0, 0]" returns "Acer V223W"
+    private static string WMIASCIIArrayToString(string data)
+    {
+        if (string.IsNullOrEmpty(data)) return "";
+
+        // Can take [65,99,101] or 65,99,101)
+        string trimmed = data.Trim();
+        if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
+            trimmed = trimmed[1..^1];
+
+        var result = new System.Text.StringBuilder();
+        foreach (string part in trimmed.Split(','))
+        {
+            string cleanPart = part.Trim();
+            if (string.IsNullOrEmpty(cleanPart)) continue;
+
+            if (int.TryParse(cleanPart, out int asciiValue))
+            {
+                if (asciiValue == 0) break;          // stops at 0
+                if (asciiValue is >= 32 and <= 126)  // printable only
+                    result.Append((char)asciiValue);
+            }
+        }
+        return result.ToString();
     }
 }

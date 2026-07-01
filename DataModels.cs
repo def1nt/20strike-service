@@ -42,12 +42,13 @@ public sealed class BIOSInfo(string name, string vendor, string version, string 
     public BIOSInfo() : this("", "", "", "") { }
 }
 
-public sealed class ComputerSystemInfo(string name, string domain, string userName)
+public sealed class ComputerSystemInfo(string name, string domain, string userName, string manufacturer)
 {
     public string Name { get; set; } = name;
     public string Domain { get; set; } = domain;
     public string UserName { get; set; } = userName;
-    public ComputerSystemInfo() : this("", "", "") { }
+    public string Manufacturer { get; set; } = manufacturer;
+    public ComputerSystemInfo() : this("", "", "", "") { }
 }
 
 public sealed class OperatingSystemInfo(string name, string version, string buildNumber, string architecture, string installDate, string lastBootUp, string localTime)
@@ -81,43 +82,49 @@ public sealed class PhysicalMemoryInfo(string manufacturer, string serialNumber,
     public PhysicalMemoryInfo() : this("", "", "", "") { }
 }
 
-public sealed class PhysicalDiskInfo(string model, string serialNumber, string size, string interfaceType)
+public sealed class PhysicalDiskInfo(string model, string serialNumber, string size, string interfaceType, string status)
 {
     public string Model { get; set; } = model;
     public string SerialNumber { get; set; } = serialNumber;
     public string Size { get; set; } = size;
     public string InterfaceType { get; set; } = interfaceType;
-    public PhysicalDiskInfo() : this("", "", "", "") { }
+    public string Status { get; set; } = status;
+    public PhysicalDiskInfo() : this("", "", "", "", "") { }
 }
 
-public sealed class LogicalDiskInfo(string name, string size, string freeSpace, string filesystem, string driveType)
+public sealed class LogicalDiskInfo(string name, string size, string freeSpace, string filesystem, string driveType, string description)
 {
     public string Name { get; set; } = name;
     public string Size { get; set; } = size;
     public string FreeSpace { get; set; } = freeSpace;
     public string FileSystem { get; set; } = filesystem;
     public string DriveType { get; set; } = driveType;
-    public LogicalDiskInfo() : this("", "", "", "", "") { }
+    public string Description { get; set; } = description;
+    public LogicalDiskInfo() : this("", "", "", "", "", "") { }
 }
 
-public sealed class VideoControllerInfo(string name, string driverVersion)
+public sealed class VideoControllerInfo(string name, string driverVersion, string memory, string videoMode)
 {
     public string Name { get; set; } = name;
     public string DriverVersion { get; set; } = driverVersion;
-    public VideoControllerInfo() : this("", "") { }
+    public string Memory { get; set; } = memory;
+    public string VideoMode { get; set; } = videoMode;
+    public VideoControllerInfo() : this("", "", "", "") { }
 }
 
-public sealed class MonitorInfo(string name)
+public sealed class MonitorInfo(string name, string instanceName)
 {
     public string Name { get; set; } = name;
-    public MonitorInfo() : this("") { }
+    public string InstanceName { get; set; } = instanceName;
+    public MonitorInfo() : this("", "") { }
 }
 
-public sealed class NetworkAdapterInfo(string name, string macAddress)
+public sealed class NetworkAdapterInfo(string name, string macAddress, string speed)
 {
     public string Name { get; set; } = name;
     public string MacAddress { get; set; } = macAddress;
-    public NetworkAdapterInfo() : this("", "") { }
+    public string Speed { get; set; } = speed;
+    public NetworkAdapterInfo() : this("", "", "") { }
 }
 
 public sealed class PrinterInfo(string name, string paperSize, string portName)
