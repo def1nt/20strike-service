@@ -245,7 +245,7 @@ partial class Application
                 computerInfo.Monitor ??= [];
                 MonitorInfo mi = new()
                 {
-                    Name = WMIASCIIArrayToString(o["UserFriendlyName"]?.ToString() ?? ""),
+                    Name = WMIASCIIArrayToString(ObjectToString(o["UserFriendlyName"])), // TODO I know this prop is Uint16[], but still unsafe
                     InstanceName = o["InstanceName"]?.ToString() ?? "",
                 };
                 computerInfo.Monitor = [.. computerInfo.Monitor, mi];
