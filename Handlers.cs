@@ -105,7 +105,10 @@ partial class Application
                     HandleLocation(context, segments, method);
                     break;
                 case "ping":
-                    await HandlePing(context, segments, method);
+                    await HandlePing(context);
+                    break;
+                case "problems":
+                    HandleProblems(context, segments);
                     break;
                 default:
                     response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -166,6 +169,14 @@ partial class Application
                 WriteRaw(response, "Method not allowed");
                 break;
         }
+    }
+
+    // /v2/problems/{computerName}
+    private static void HandleProblems(HttpListenerContext context, string[] segments)
+    {
+        if (segments.Length < 2) { context.Response.StatusCode = (int)HttpStatusCode.BadRequest; return; }
+        ProblemInfo[] info = FindProblems(segments[1]);
+        WriteJson(context.Response, info);
     }
 
     // /v2/location/{name}
@@ -229,7 +240,7 @@ partial class Application
 
     private static readonly SemaphoreSlim pingLock = new(1, 1);
     // /v2/ping - queries every computer, returns statuses and IP addesses
-    private static async Task HandlePing(HttpListenerContext context, string[] segments, string method)
+    private static async Task HandlePing(HttpListenerContext context)
     {
         if (await pingLock.WaitAsync(0))
         {
