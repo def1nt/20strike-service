@@ -246,7 +246,8 @@ partial class Application
         {
             try
             {
-                var computers = Directory.GetFiles("data").Select(Path.GetFileNameWithoutExtension).Where(s => s is not null).Select(s => s!).ToArray();
+                // Includes ./computers file and everything
+                var computers = GetComputers();
                 var tasks = new Task<(string name, string ip, bool status)>[computers.Length];
                 int i = 0;
                 foreach (string computer in computers)
@@ -277,9 +278,26 @@ partial class Application
         try
         {
             var response = await ping.SendPingAsync(computerName, 3000);
-            return (computerName, response.Address.ToString(), response.Status == System.Net.NetworkInformation.IPStatus.Success);
+            if (response.Status == System.Net.NetworkInformation.IPStatus.Success)
+                return (computerName, response.Address.ToString(), true);
         }
-        catch (Exception) { return (computerName, "", false); }
+        catch (Exception) { /* Resolution/network error - fall back to DNS lookup below */ }
+
+        // No ICMP reply - response.Address would be our own address, go ask DNS
+        return (computerName, await ResolveAddress(computerName), false);
+    }
+
+    // Resolves a host name to an IP address via DNS (applies the suffix search list).
+    private static async Task<string> ResolveAddress(string computerName)
+    {
+        try
+        {
+            var addresses = await Dns.GetHostAddressesAsync(computerName);
+            var ip = addresses.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                  ?? addresses.FirstOrDefault();
+            return ip?.ToString() ?? "";
+        }
+        catch (Exception) { return ""; }
     }
 
     private static void WriteRaw(HttpListenerResponse response, string text)
