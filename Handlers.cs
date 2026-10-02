@@ -267,8 +267,8 @@ partial class Application
         }
         else
         {
-            WriteRaw(context.Response, "Server is busy");
             context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+            WriteRaw(context.Response, "Server is busy", false);
         }
     }
 
@@ -300,9 +300,11 @@ partial class Application
         catch (Exception) { return ""; }
     }
 
-    private static void WriteRaw(HttpListenerResponse response, string text)
+    private static void WriteRaw(HttpListenerResponse response, string text, bool json = true)
     {
         var buffer = Encoding.UTF8.GetBytes(text);
+        response.ContentType = json ? "application/json" : "text/plain";
+        response.ContentLength64 = buffer.Length;
         response.OutputStream.Write(buffer, 0, buffer.Length);
     }
 
