@@ -110,6 +110,9 @@ partial class Application
                 case "problems":
                     HandleProblems(context, segments);
                     break;
+                case "users":
+                    HandleUsers(context);
+                    break;
                 default:
                     response.StatusCode = (int)HttpStatusCode.NotFound;
                     WriteRaw(response, "Path not found");
@@ -298,6 +301,13 @@ partial class Application
             return ip?.ToString() ?? "";
         }
         catch (Exception) { return ""; }
+    }
+
+    private static void HandleUsers(HttpListenerContext context)
+    {
+        var users = AD.GetUsers();
+        context.Response.StatusCode = (int)HttpStatusCode.OK;
+        WriteJson(context.Response, users);
     }
 
     private static void WriteRaw(HttpListenerResponse response, string text, bool json = true)
