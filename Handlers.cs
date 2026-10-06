@@ -325,6 +325,8 @@ partial class Application
         var searchType = segments[1];
         var searchValue = segments[2];
         searchValue = System.Web.HttpUtility.UrlDecode(searchValue); // decode url non ascii symbols
+        Dictionary<string, string> users = [];
+        if (searchType == "user") users = AD.GetUsers();
         List<string> results = [];
         foreach (var computer in computers)
         {
@@ -333,7 +335,12 @@ partial class Application
             switch (searchType)
             {
                 case "user":
-                    if (data.ComputerSystem?.UserName.Contains(searchValue) ?? false)
+                    // Normalize DOMAIN\Username of uSeRnaME, to "username"
+                    var username = data.ComputerSystem?.UserName.Split('\\').Last().ToLower() ?? "";
+                    if (!users.TryGetValue(username, out var fullname)) fullname = "";
+
+                    if (fullname.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ||
+                        username.Contains(searchValue, StringComparison.OrdinalIgnoreCase))
                         results.Add(computer);
                     break;
                 case "hardware":
