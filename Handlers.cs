@@ -113,6 +113,9 @@ partial class Application
                 case "users":
                     HandleUsers(context);
                     break;
+                case "search":
+                    HandleSearch(context, segments);
+                    break;
                 default:
                     response.StatusCode = (int)HttpStatusCode.NotFound;
                     WriteRaw(response, "Path not found");
@@ -308,6 +311,49 @@ partial class Application
         var users = AD.GetUsers();
         context.Response.StatusCode = (int)HttpStatusCode.OK;
         WriteJson(context.Response, users);
+    }
+
+    // /v2/search/user/{username}
+    // /v2/search/hardware/{hardwareId}
+    // /v2/search/software/{softwareId}
+    // /v2/search/mac/{macAddress}
+    // Always returns all matching computer names
+    private static void HandleSearch(HttpListenerContext context, string[] segments)
+    {
+        if (segments.Length < 3) return;
+        var computers = GetComputers();
+        var searchType = segments[1];
+        var searchValue = segments[2];
+        searchValue = System.Web.HttpUtility.UrlDecode(searchValue); // decode url non ascii symbols
+        List<string> results = [];
+        foreach (var computer in computers)
+        {
+            var data = Repository.Load($"{computer}.json");
+            if (data is null) continue;
+            switch (searchType)
+            {
+                case "user":
+                    if (data.ComputerSystem?.UserName.Contains(searchValue) ?? false)
+                        results.Add(computer);
+                    break;
+                case "hardware":
+                    if ((data.PhysicalDisk?.Any(d => d.Model.Contains(searchValue, StringComparison.OrdinalIgnoreCase)) ?? false) ||
+                        (data.Processor?.Any(d => d.Name.Contains(searchValue, StringComparison.OrdinalIgnoreCase)) ?? false) ||
+                        (data.VideoController?.Any(d => d.Name.Contains(searchValue, StringComparison.OrdinalIgnoreCase)) ?? false))
+                        results.Add(computer);
+                    break;
+                case "software":
+                    if (data.Software?.Any(d => d.Name.Contains(searchValue, StringComparison.OrdinalIgnoreCase)) ?? false)
+                        results.Add(computer);
+                    break;
+                case "mac":
+                    if (data.NetworkAdapter?.Any(d => d.MacAddress.Contains(searchValue, StringComparison.OrdinalIgnoreCase)) ?? false)
+                        results.Add(computer);
+                    break;
+            }
+        }
+        context.Response.StatusCode = (int)HttpStatusCode.OK;
+        WriteJson(context.Response, results);
     }
 
     private static void WriteRaw(HttpListenerResponse response, string text, bool json = true)
