@@ -8,7 +8,7 @@ partial class Application
         if (computerInfo is null) return [new("Invalid computer name", "Computer not found")];
 
         return [.. new ProblemInfo?[]{
-            CheckIfDataExists(computerInfo.ComputerSystem),
+            CheckIfDataExists(computerInfo),
             CheckLastSeen(computerInfo.OperatingSystem),
             CheckOSVersion(computerInfo.OperatingSystem),
             }.OfType<ProblemInfo>(),
@@ -17,15 +17,18 @@ partial class Application
         ];
     }
 
-    private static ProblemInfo? CheckIfDataExists(ComputerSystemInfo? systemInfo)
+    private static ProblemInfo? CheckIfDataExists(ComputerInfo computerInfo)
     {
-        if (systemInfo is null) return new ProblemInfo("Data not found", "Computer system data not found");
+        if (computerInfo.ComputerSystem is null &&
+            computerInfo.OperatingSystem is null &&
+            computerInfo.PhysicalDisk is null &&
+            computerInfo.Processor is null) return new ProblemInfo("Data not found", "No data");
         else return null;
     }
 
     private static ProblemInfo? CheckLastSeen(OperatingSystemInfo? osInfo)
     {
-        if (osInfo == null) return new ProblemInfo("Data not found", "Operating system data not found");
+        if (osInfo is null) return null; // We already checked missing data error, not duplicating that one
         if (!DateTime.TryParseExact(osInfo.LocalTime[..14], // Without +TZ part
                                     "yyyyMMddHHmmss",
                                     System.Globalization.CultureInfo.InvariantCulture,
@@ -38,7 +41,7 @@ partial class Application
 
     private static ProblemInfo? CheckOSVersion(OperatingSystemInfo? osInfo)
     {
-        if (osInfo == null) return new ProblemInfo("Data not found", "Operating system data not found");
+        if (osInfo is null) return null;
         if (!int.TryParse(osInfo.BuildNumber, out int buildNumber)) return new ProblemInfo("Invalid build number", "Build number is not a valid integer");
         if (buildNumber < 9600) return new ProblemInfo("OS version", "OS version is older than Windows 8");
         return null;
@@ -46,7 +49,7 @@ partial class Application
 
     private static ProblemInfo[] CheckDiskHealth(PhysicalDiskInfo[]? diskInfo)
     {
-        if (diskInfo == null || diskInfo.Length == 0) return [new ProblemInfo("Data not found", "Disk data not found")];
+        if (diskInfo is null || diskInfo.Length == 0) return [];
         ProblemInfo[] problems = [];
         foreach (var disk in diskInfo)
         {
@@ -57,7 +60,7 @@ partial class Application
 
     private static ProblemInfo[] CheckFreeDiskSpace(LogicalDiskInfo[]? diskInfo)
     {
-        if (diskInfo == null || diskInfo.Length == 0) return [new ProblemInfo("Data not found", "Disk data not found")];
+        if (diskInfo is null || diskInfo.Length == 0) return [];
         ProblemInfo[] problems = [];
         foreach (var disk in diskInfo.Where(d => d.DriveType == "3")) // Drive type is 3 for fixed drives
         {
