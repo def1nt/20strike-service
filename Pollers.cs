@@ -265,7 +265,8 @@ partial class Application
                 PrinterInfo pri = new()
                 {
                     Name = o["Name"]?.ToString() ?? "",
-                    PaperSize = (o["PrinterPaperNames"] as string[])?.Aggregate((a, b) => a + ", " + b) ?? "",
+                    // PaperSize = (o["PrinterPaperNames"] as string[])?.Aggregate((a, b) => a + ", " + b) ?? "", // TODO I literally have a method for this...
+                    PaperSize = ObjectToString(o["PrinterPaperNames"]),
                     PortName = o["PortName"]?.ToString() ?? ""
                 };
                 computerInfo.Printer = [.. computerInfo.Printer, pri];
