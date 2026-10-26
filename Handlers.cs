@@ -8,6 +8,7 @@ partial class Application
 {
     void ProcessRequest(Dictionary<string, string> request, HttpListenerResponse response)
     {
+        return; // Function unsupported and to be removed
         // "action" and "target" keys checked by caller!
 
         if (request["action"] == "read")

@@ -61,44 +61,6 @@ partial class Application
             response.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
 
             if (request.RawUrl?.Contains("/v2/") ?? false) { _ = Task.Run(() => ProcessRequestV2(context)); continue; }
-            Dictionary<string, string> req;
-            try
-            {
-                string reqtext = new StreamReader(request.InputStream, request.ContentEncoding).ReadToEnd();
-                Console.WriteLine(reqtext);
-                req = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(reqtext)!;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("ERROR: " + e.Message);
-                response.Close();
-                continue;
-            }
-            response.ContentType = "text/plain";
-
-            if (!req.ContainsKey("action")) { response.Close(); continue; }
-            if (!req.ContainsKey("target")) { response.Close(); continue; }
-
-            if (req["action"] == "stop")
-            {
-                response.Close();
-                listener.Close();
-                return;
-            }
-
-            try
-            {
-                ProcessRequest(req, response);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-            finally
-            {
-                try { response.Close(); }
-                catch (Exception e) { Console.WriteLine("ERROR: " + e.Message); }
-            }
 
         }
         listener.Close();
