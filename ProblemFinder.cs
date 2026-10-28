@@ -2,6 +2,7 @@ namespace _20strike;
 
 partial class Application
 {
+    private static readonly List<string> unwantedSoftware = ["steam", "mediaget", "torrent", "vpn", "teamviewer"];
     private static ProblemInfo[] FindProblems(string computerName)
     {
         var computerInfo = Repository.Load($"{computerName}.json");
@@ -14,6 +15,7 @@ partial class Application
             }.OfType<ProblemInfo>(),
             .. CheckDiskHealth(computerInfo.PhysicalDisk),
             .. CheckFreeDiskSpace(computerInfo.LogicalDisk),
+            .. CheckUnwantedSoftware(computerInfo.Software),
         ];
     }
 
@@ -76,6 +78,18 @@ partial class Application
             }
             var percentage = freeSpace * 100 / size;
             if (percentage < 5) problems = [.. problems, new ProblemInfo("Free disk space", $"Disk {disk.Name} has {percentage}% free space")];
+        }
+        return problems;
+    }
+
+    private static ProblemInfo[] CheckUnwantedSoftware(SoftwareInfo[]? softwareInfo)
+    {
+        if (softwareInfo is null) return [];
+        ProblemInfo[] problems = [];
+        foreach (var si in softwareInfo)
+        {
+            if (unwantedSoftware.Any(us => si.Name.Contains(us, StringComparison.OrdinalIgnoreCase)))
+                problems = [.. problems, new ProblemInfo("Unwanted software", $"Installed: {si.Name}")];
         }
         return problems;
     }
