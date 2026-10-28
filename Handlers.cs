@@ -209,11 +209,17 @@ partial class Application
 
             case "GET":
                 var info = Repository.Load($"{computerName}.json");
-                var location = info?.Location;
-                if (location is null)
+                if (info is null)
                 {
                     response.StatusCode = (int)HttpStatusCode.NotFound;
                     WriteRaw(response, "Computer not found");
+                    break;
+                }
+                var location = info.Location;
+                if (location is null)
+                {
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                    WriteRaw(response, "No location", false);
                 }
                 else
                 {
@@ -224,6 +230,12 @@ partial class Application
             case "POST":
             case "PUT":
                 var mapData = JsonSerializer.Deserialize<MapData>(context.Request.InputStream);
+                if (mapData is null)
+                {
+                    response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    WriteRaw(response, "Invalid data", false);
+                    break;
+                }
                 info = Repository.Load($"{computerName}.json");
                 if (info is null)
                 {
@@ -235,6 +247,19 @@ partial class Application
                     info.Location = mapData;
                     new Repository(info).Save();
                     WriteRaw(response, "Location saved");
+                }
+                break;
+            case "DELETE":
+                info = Repository.Load($"{computerName}.json");
+                if (info is null)
+                {
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                    WriteRaw(response, "Computer not found", false);
+                }
+                else
+                {
+                    Repository.ClearLocation(computerName);
+                    WriteRaw(response, "Location deleted", false);
                 }
                 break;
 

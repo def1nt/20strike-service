@@ -22,6 +22,15 @@ public class Repository(ComputerInfo data)
         File.WriteAllText(Path.Join(path, filename), JsonSerializer.Serialize(newdata, options));
     }
 
+    // Explicitly removes MapData, only use for that
+    public static void ClearLocation(string computerName)
+    {
+        var olddata = Load(computerName + ".json");
+        if (olddata is null) return;
+        olddata.Location = null;
+        File.WriteAllText(Path.Join(path, computerName + ".json"), JsonSerializer.Serialize(olddata, options));
+    }
+
     public static ComputerInfo? Load(string filename)
     {
         if (!File.Exists(Path.Join(path, filename))) return null;
