@@ -23,10 +23,26 @@ partial class Application
         Console.WriteLine("Done updating");
     }
 
+    static readonly string[] classes = [
+        "Win32_BIOS",
+        "Win32_ComputerSystem",
+        "Win32_DesktopMonitor",
+        "WmiMonitorID",
+        "Win32_DiskDrive",
+        "Win32_LogicalDisk",
+        "Win32_NetworkAdapter",
+        "Win32_OperatingSystem",
+        "Win32_PhysicalMemory",
+        "Win32_Printer",
+        "Win32_Processor",
+        "Meta_Software",
+        "Win32_USBController",
+        "Win32_VideoController",
+    ];
+
     private void QueryComputer(string? Computer)
     {
         if (Computer == null) return;
-        string[] classes = GetClasses();
         ComputerInfo computerInfo = new(Computer);
 
         foreach (string? Class in classes)
@@ -64,8 +80,7 @@ partial class Application
             computerInfo.Software = [.. t];
             return;
         }
-        string WMIProvider = "cimv2";
-        if (classname == "WmiMonitorID") WMIProvider = "wmi";
+        string WMIProvider = (classname == "WmiMonitorID") ? "wmi" : "cimv2";
         var mp = new ManagementPath($@"\\{computername}\root\{WMIProvider}:{classname}");
         using var mc = new ManagementClass(mp);
         ManagementObjectCollection mo;
@@ -140,11 +155,6 @@ partial class Application
             .ToArray();
         }
         return [.. computers];
-    }
-
-    private static string[] GetClasses()
-    {
-        return [.. File.ReadAllLines("./classes")];
     }
 
     private static void ProcessManagementObject(ManagementObject o, string classname, ComputerInfo computerInfo)
