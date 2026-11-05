@@ -115,14 +115,14 @@ partial class Application
         };
     }
 
-    private static string ObjectToString(object o)
+    private static string ObjectToString(object? o)
     {
-        if (o.GetType().IsArray)
+        if (o is not null && o.GetType().IsArray)
         {
             var enumerable = o as System.Collections.IEnumerable;
-            return "[" + string.Join(", ", enumerable.Cast<object>().Select(x => x.ToString())) + "]";
+            return "[" + string.Join(", ", enumerable!.Cast<object>().Select(x => x.ToString())) + "]";
         }
-        return string.IsNullOrEmpty(o.ToString()) ? "" : o.ToString() ?? "";
+        return o?.ToString() ?? "";
     }
 
     private static string[] GetComputers()
@@ -255,7 +255,6 @@ partial class Application
                 PrinterInfo pri = new()
                 {
                     Name = o["Name"]?.ToString() ?? "",
-                    // PaperSize = (o["PrinterPaperNames"] as string[])?.Aggregate((a, b) => a + ", " + b) ?? "", // TODO I literally have a method for this...
                     PaperSize = ObjectToString(o["PrinterPaperNames"]),
                     PortName = o["PortName"]?.ToString() ?? ""
                 };
