@@ -85,7 +85,6 @@ partial class Application
         isAutoUpdateRunning = true;
         try
         {
-            PruneData();
             if (DateTime.Today.DayOfWeek != DayOfWeek.Sunday && DateTime.Today.DayOfWeek != DayOfWeek.Saturday)
                 await QueryAll();
             Console.WriteLine(DateTime.Now.ToString());

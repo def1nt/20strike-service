@@ -93,25 +93,9 @@ partial class Application
             Console.WriteLine($"ERROR Unsupported class {classname} on {computername}");
             return;
         }
-        DBCleanup(computername, classname);
         foreach (ManagementObject o in mo)
         {
-            using (o)
-            {
-                PropertyDataCollection props = o.Properties;
-                List<string[]> props_processed = [];  // Deal with these nulls!
-                foreach (var p in props)
-                {
-                    if (p.Value == null) continue;
-
-                    string t = p.Type.ToString();
-
-                    string s = GetFromCIMObject(p.Type, p.Value);
-                    props_processed.Add([computername, classname, p.Name, t, s]);
-                }
-                ProcessManagementObject(o, classname, computerInfo);
-                foreach (var p in props_processed) DBInsert(p);
-            }
+            using (o) ProcessManagementObject(o, classname, computerInfo);
         }
         mo.Dispose();
     }

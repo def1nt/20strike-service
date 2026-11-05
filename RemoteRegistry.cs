@@ -17,7 +17,6 @@ partial class Application
 
             using RegistryKey HKLMRootKey = RegistryKey.OpenRemoteBaseKey(RegistryHive.LocalMachine, computername);
             {
-                DBCleanup(computername, "Meta_Software");
                 using RegistryKey? key32 = HKLMRootKey.OpenSubKey(path);
                 if (key32 is not null) softwareinfo = AddToDB(key32, computername);
 
@@ -70,7 +69,6 @@ partial class Application
             {
                 string value = unnull(softwareinfo.GetValue(key));
                 softwareRecordTemp.Add(key, value);
-                DBInsert([computername, "Meta_Software", key, "String", value]);
             }
             softwareinfo_.Add(new()
             {
