@@ -58,7 +58,7 @@ partial class Application
             if (request.RawUrl?.Contains("favicon.ico") ?? false) { response.Close(); continue; }
             response.AppendHeader("Access-Control-Allow-Origin", "*");
             response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
-            response.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+            response.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE");
 
             if (request.RawUrl?.Contains("/v2/") ?? false) { _ = Task.Run(() => ProcessRequestV2(context)); continue; }
 
