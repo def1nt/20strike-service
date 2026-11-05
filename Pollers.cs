@@ -38,6 +38,7 @@ partial class Application
         "Meta_Software",
         "Win32_USBController",
         "Win32_VideoController",
+        "Win32_Process",
     ];
 
     private void QueryComputer(string? Computer)
@@ -87,17 +88,17 @@ partial class Application
         try
         {
             mo = mc.GetInstances();
+            foreach (ManagementObject o in mo)
+            {
+                using (o) ProcessManagementObject(o, classname, computerInfo);
+            }
         }
         catch (ManagementException)
         {
             Console.WriteLine($"ERROR Unsupported class {classname} on {computername}");
             return;
         }
-        foreach (ManagementObject o in mo)
-        {
-            using (o) ProcessManagementObject(o, classname, computerInfo);
-        }
-        mo.Dispose();
+        mo?.Dispose();
     }
 
     private static string GetFromCIMObject(CimType type, object value)
